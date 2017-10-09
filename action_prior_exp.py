@@ -215,7 +215,7 @@ def print_policy(state_space, policy, sample_rate=5):
 def main():
 
     # Setup multitask setting.
-    mdp_class = "octo"
+    mdp_class = "taxi"
     mdp_distr = make_mdp.make_mdp_distr(mdp_class=mdp_class)
     actions = mdp_distr.get_actions()
 
@@ -249,7 +249,7 @@ def main():
     # agents = [opt_belief_agent]
 
     # Run task.
-    run_agents_multi_task(agents, mdp_distr, task_samples=200, steps=150, reset_at_terminal=False, is_rec_disc_reward=True)
+    run_agents_multi_task(agents, mdp_distr, task_samples=200, steps=150, reset_at_terminal=True, is_rec_disc_reward=True)
 
 
 if __name__ == "__main__":
