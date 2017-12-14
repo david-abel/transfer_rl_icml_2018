@@ -8,11 +8,13 @@ import copy
 
 # Other imports.
 import OptimalBeliefAgentClass
+from AvgValueIterationClass import AvgValueIteration
 from simple_rl.utils import make_mdp
 from simple_rl.mdp import MDP, MDPDistribution
 from simple_rl.run_experiments import run_agents_multi_task, run_agents_on_mdp
 from simple_rl.agents import RandomAgent, RMaxAgent, QLearnerAgent, FixedPolicyAgent
 from simple_rl.planning.ValueIterationClass import ValueIteration
+
 
 def compute_avg_mdp(mdp_distr, sample_rate=5):
     '''
@@ -215,7 +217,7 @@ def print_policy(state_space, policy, sample_rate=5):
 def main():
 
     # Setup multitask setting.
-    mdp_class = "taxi"
+    mdp_class = "grid"
     mdp_distr = make_mdp.make_mdp_distr(mdp_class=mdp_class)
     actions = mdp_distr.get_actions()
 
@@ -223,10 +225,14 @@ def main():
     print "Making and solving avg MDP...",
     sys.stdout.flush()
     avg_mdp = compute_avg_mdp(mdp_distr)
-    avg_mdp_vi = ValueIteration(avg_mdp, delta=0.0001, max_iterations=1000, sample_rate=5)
+    avg_mdp_vi = ValueIteration(avg_mdp, delta=0.001, max_iterations=1000, sample_rate=5)
     iters, value = avg_mdp_vi.run_vi()
     print "done." #, iters, value
     sys.stdout.flush()
+
+    print "Avg V..."
+    avg_val_vi = AvgValueIteration(mdp_distr)
+    avg_val_vi.run_vi()
 
     mdp_distr_copy = copy.deepcopy(mdp_distr)
 
@@ -237,6 +243,7 @@ def main():
     opt_stoch_policy_agent = FixedPolicyAgent(opt_stoch_policy, name="$\hat{\pi}_S^*$")
     opt_belief_agent = OptimalBeliefAgentClass.OptimalBeliefAgent(mdp_distr, actions)
     vi_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="$\hat{\pi}_D^*$")
+    avg_v_vi_agent = FixedPolicyAgent(avg_val_vi.policy, name="$\hat{\pi}_V^*$")
     rand_agent = RandomAgent(actions, name="$\pi^u$")
     ql_agent = QLearnerAgent(actions)
     print "done."
@@ -245,11 +252,11 @@ def main():
     # print_policy(avg_mdp_vi.get_states(), vi_agent.policy)
     # quit()
     
-    agents = [vi_agent, opt_stoch_policy_agent, rand_agent, opt_belief_agent]
+    agents = [vi_agent, opt_stoch_policy_agent, rand_agent, avg_v_vi_agent]
     # agents = [opt_belief_agent]
 
     # Run task.
-    run_agents_multi_task(agents, mdp_distr, task_samples=200, steps=150, reset_at_terminal=True, is_rec_disc_reward=True)
+    run_agents_multi_task(agents, mdp_distr, task_samples=25, episodes=50, steps=100, reset_at_terminal=True, is_rec_disc_reward=False)
 
 
 if __name__ == "__main__":
