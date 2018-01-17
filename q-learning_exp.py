@@ -217,7 +217,9 @@ def print_policy(state_space, policy, sample_rate=5):
 def main():
 
     # Setup multitask setting.
+    # mdp_class = "chain"
     mdp_class = "grid"
+    # mdp_class = "four_room"
     # mdp_class = "rock"
     # mdp_class = "taxi"
     mdp_distr = make_mdp.make_mdp_distr(mdp_class=mdp_class)
@@ -229,37 +231,52 @@ def main():
     avg_mdp = compute_avg_mdp(mdp_distr)
     avg_mdp_vi = ValueIteration(avg_mdp, delta=0.001, max_iterations=1000, sample_rate=5)
     iters, value = avg_mdp_vi.run_vi()
+
+    ### Yuu
+    # ValueIterationClass.py: Get Q-table from this: implement a function which returns Q table from V table.
+    # QLearnerAgentClass.py: Set q-table by set_q_function.
+    q_func = avg_mdp_vi.get_q_function()
+    transfer_ql_agent = QLearnerAgent(actions, name="transferQ")
+    transfer_ql_agent.set_q_function(q_func)
+
+    transfer_fixed_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="transferFixed")
+    
     print "done." #, iters, value
     sys.stdout.flush()
 
-    print "Avg V..."
-    avg_val_vi = AvgValueIteration(mdp_distr)
-    avg_val_vi.run_vi()
+    #     print "Avg V..."
+    #     avg_val_vi = AvgValueIteration(mdp_distr)
+    #     avg_val_vi.run_vi()
 
     mdp_distr_copy = copy.deepcopy(mdp_distr)
 
     # Agents.
     print "Making agents...",
     sys.stdout.flush()
-    opt_stoch_policy = compute_optimal_stoch_policy(mdp_distr_copy)
-    opt_stoch_policy_agent = FixedPolicyAgent(opt_stoch_policy, name="$\hat{\pi}_S^*$")
-    opt_belief_agent = OptimalBeliefAgentClass.OptimalBeliefAgent(mdp_distr, actions)
-    vi_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="$\hat{\pi}_D^*$")
-    avg_v_vi_agent = FixedPolicyAgent(avg_val_vi.policy, name="$\hat{\pi}_V^*$")
+    # opt_stoch_policy = compute_optimal_stoch_policy(mdp_distr_copy)
+    # opt_stoch_policy_agent = FixedPolicyAgent(opt_stoch_policy, name="$\hat{\pi}_S^*$")
+    # opt_belief_agent = OptimalBeliefAgentClass.OptimalBeliefAgent(mdp_distr, actions)
+    # vi_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="$\hat{\pi}_D^*$")
+    # avg_v_vi_agent = FixedPolicyAgent(avg_val_vi.policy, name="$\hat{\pi}_V^*$")
     rand_agent = RandomAgent(actions, name="$\pi^u$")
-    ql_agent = QLearnerAgent(actions)
+    pure_ql_agent = QLearnerAgent(actions, name="pureQ")
     print "done."
 
     # print "Optimal deterministic:"
     # print_policy(avg_mdp_vi.get_states(), vi_agent.policy)
     # quit()
     
-    agents = [vi_agent, opt_stoch_policy_agent, rand_agent, avg_v_vi_agent, opt_belief_agent]
+    agents = [transfer_ql_agent, transfer_fixed_agent, pure_ql_agent, rand_agent]
     # agents = [opt_belief_agent]
 
     # Run task.
-    run_agents_multi_task(agents, mdp_distr, task_samples=25, episodes=50, steps=100, reset_at_terminal=True, is_rec_disc_reward=False)
+    # TODO: Function for Learning on each MDP
+    run_agents_multi_task(agents, mdp_distr, task_samples=10, episodes=100, steps=2000, reset_at_terminal=True, is_rec_disc_reward=False)
 
+    # num_tasks = 5
+    # for t in range(num_tasks):
+    #     task = mdp_distr.sample()
+    #     run_agents_on_mdp(agents, task)
 
 if __name__ == "__main__":
     main()
