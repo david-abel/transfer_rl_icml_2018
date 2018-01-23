@@ -7,12 +7,12 @@ import sys
 import copy
 
 # Other imports.
-import OptimalBeliefAgentClass
+# import OptimalBeliefAgentClass
 from AvgValueIterationClass import AvgValueIteration
 from simple_rl.utils import make_mdp
 from simple_rl.mdp import MDP, MDPDistribution
 from simple_rl.run_experiments import run_agents_multi_task, run_agents_on_mdp
-from simple_rl.agents import RandomAgent, RMaxAgent, QLearnerAgent, FixedPolicyAgent
+from simple_rl.agents import RandomAgent, RMaxAgent, QLearnerAgent, FixedPolicyAgent, DelayedQLearnerAgent
 from simple_rl.planning.ValueIterationClass import ValueIteration
 
 
@@ -242,57 +242,48 @@ def compute_optimistic_q_function(mdp_distr, sample_rate=5):
     return opt_q_func
 
 
-def compute_pesimistic_q_function(mdp_distr, sample_rate=5):
-    '''
-    Instead of transferring an average Q-value, we transfer the highest Q-value in MDPs so that
-    it will not under estimate the Q-value.
-    '''
-    pes_q_func = defaultdict(lambda: defaultdict(lambda: float("inf")))
-    for mdp in mdp_distr.get_mdps():
-        # prob_of_mdp = mdp_distr.get_prob_of_mdp(mdp)
+# def compute_pesimistic_q_function(mdp_distr, sample_rate=5):
+#     '''
+#     Instead of transferring an average Q-value, we transfer the highest Q-value in MDPs so that
+#     it will not under estimate the Q-value.
+#     '''
+#     pes_q_func = defaultdict(lambda: defaultdict(lambda: float("inf")))
+#     for mdp in mdp_distr.get_mdps():
+#         # prob_of_mdp = mdp_distr.get_prob_of_mdp(mdp)
+# 
+#         # Get a vi instance to compute state space.
+#         vi = ValueIteration(mdp, delta=0.0001, max_iterations=1000, sample_rate=sample_rate)
+#         iters, value = vi.run_vi()
+#         q_func = vi.get_q_function()
+#         # print "value =", value
+#         for s in q_func:
+#             for a in q_func[s]:
+#                 pes_q_func[s][a] = min(pes_q_func[s][a], q_func[s][a])
+#     return pes_q_func
+# 
+# 
+# def compute_average_q_function(mdp_distr, sample_rate=5):
+#     '''
+#     Instead of transferring an average Q-value, we transfer the highest Q-value in MDPs so that
+#     it will not under estimate the Q-value.
+#     '''
+#     avg_q_func = defaultdict(lambda: defaultdict(lambda: 0))
+#     for mdp in mdp_distr.get_mdps():
+#         prob_of_mdp = mdp_distr.get_prob_of_mdp(mdp)
+# 
+#         # Get a vi instance to compute state space.
+#         vi = ValueIteration(mdp, delta=0.0001, max_iterations=1000, sample_rate=sample_rate)
+#         iters, value = vi.run_vi()
+#         q_func = vi.get_q_function()
+#         for s in q_func:
+#             for a in q_func[s]:
+#                 avg_q_func[s][a] = avg_q_func[s][a] + prob_of_mdp * q_func[s][a]
+#     return avg_q_func
 
-        # Get a vi instance to compute state space.
-        vi = ValueIteration(mdp, delta=0.0001, max_iterations=1000, sample_rate=sample_rate)
-        iters, value = vi.run_vi()
-        q_func = vi.get_q_function()
-        # print "value =", value
-        for s in q_func:
-            for a in q_func[s]:
-                pes_q_func[s][a] = min(pes_q_func[s][a], q_func[s][a])
-    return pes_q_func
 
-
-def compute_average_q_function(mdp_distr, sample_rate=5):
-    '''
-    Instead of transferring an average Q-value, we transfer the highest Q-value in MDPs so that
-    it will not under estimate the Q-value.
-    '''
-    avg_q_func = defaultdict(lambda: defaultdict(lambda: 0))
-    for mdp in mdp_distr.get_mdps():
-        prob_of_mdp = mdp_distr.get_prob_of_mdp(mdp)
-
-        # Get a vi instance to compute state space.
-        vi = ValueIteration(mdp, delta=0.0001, max_iterations=1000, sample_rate=sample_rate)
-        iters, value = vi.run_vi()
-        q_func = vi.get_q_function()
-        for s in q_func:
-            for a in q_func[s]:
-                avg_q_func[s][a] = avg_q_func[s][a] + prob_of_mdp * q_func[s][a]
-    return avg_q_func
-
-
-def main():
+def main(mdp_class="grid", eps=0.1, open_plot=True):
 
     # Setup multitask setting.
-    # mdp_class = "chain"
-    # mdp_class = "random"
-    mdp_class = "grid"
-    # mdp_class = "octo"
-    # mdp_class = "hall"
-    # mdp_class = "four_room"
-    # mdp_class = "hrooms"
-    # mdp_class = "rock"
-    # mdp_class = "taxi"
     mdp_distr = make_mdp.make_mdp_distr(mdp_class=mdp_class)
     actions = mdp_distr.get_actions()
 
@@ -307,7 +298,7 @@ def main():
     # ValueIterationClass.py: Get Q-table from this: implement a function which returns Q table from V table.
     # QLearnerAgentClass.py: Set q-table by set_q_function.
     q_func = avg_mdp_vi.get_q_function()
-    transfer_ql_agent = QLearnerAgent(actions, name="transferQ")
+    transfer_ql_agent = QLearnerAgent(actions, epsilon=eps, name="Q-trans-avg")
     transfer_ql_agent_eps = QLearnerAgent(actions, epsilon=0.3, name="transferQ-eps0.3")
     # transfer_ql_agent_sm = QLearnerAgent(actions, explore="softmax", name="transferQ-sm")
     transfer_ql_agent.set_q_function(q_func)
@@ -319,26 +310,26 @@ def main():
     print "done." #, iters, value
     sys.stdout.flush()
 
-    print "Average Q Transfer"
-    avg_q_func = compute_average_q_function(mdp_distr)
-    transfer_ql_agent_avgq = QLearnerAgent(actions, epsilon=0.1, name="transferAvgQ")
-    transfer_ql_agent_avgq.set_q_function(avg_q_func)
-
     print "Optimistic Q Transfer"
     opt_q_func = compute_optimistic_q_function(mdp_distr)
-    transfer_ql_agent_optq = QLearnerAgent(actions, epsilon=0.1, name="transferMaxQ")
+    transfer_ql_agent_optq = QLearnerAgent(actions, epsilon=eps, name="Q-trans-max")
     transfer_ql_agent_optq.set_q_function(opt_q_func)
 
-    print "Pesimistic Q Transfer"
-    pes_q_func = compute_pesimistic_q_function(mdp_distr)
-    transfer_ql_agent_pesq = QLearnerAgent(actions, epsilon=0.1, name="transferMinQ")
-    transfer_ql_agent_pesq.set_q_function(pes_q_func)
+#     print "Pesimistic Q Transfer"
+#     pes_q_func = compute_pesimistic_q_function(mdp_distr)
+#     transfer_ql_agent_pesq = QLearnerAgent(actions, epsilon=eps, name="transferMinQ")
+#     transfer_ql_agent_pesq.set_q_function(pes_q_func)
+# 
+#     print "Average Q Transfer"
+#     avg_q_func = compute_average_q_function(mdp_distr)
+#     transfer_ql_agent_avgq = QLearnerAgent(actions, epsilon=0.1, name="transferAvgQ")
+#     transfer_ql_agent_avgq.set_q_function(avg_q_func)
 
     #     print "Avg V..."
     #     avg_val_vi = AvgValueIteration(mdp_distr)
     #     avg_val_vi.run_vi()
 
-    mdp_distr_copy = copy.deepcopy(mdp_distr)
+    # mdp_distr_copy = copy.deepcopy(mdp_distr)
 
     # Agents.
     print "Making agents...",
@@ -349,21 +340,28 @@ def main():
     # vi_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="$\hat{\pi}_D^*$")
     # avg_v_vi_agent = FixedPolicyAgent(avg_val_vi.policy, name="$\hat{\pi}_V^*$")
     rand_agent = RandomAgent(actions, name="$\pi^u$")
-    pure_ql_agent = QLearnerAgent(actions, name="pureQ")
-    pure_ql_agent_opt = QLearnerAgent(actions, default_q=1.0, name="pureQOpt")
+    pure_ql_agent = QLearnerAgent(actions, epsilon=eps, name="Q-0")
+    qmax = 1.0 * (1 - 0.99)
+    # qmax = 1.0
+    pure_ql_agent_opt = QLearnerAgent(actions, epsilon=eps, default_q=qmax, name="Q-vmax")
     pure_ql_agent_eps = QLearnerAgent(actions, epsilon=0.3, name="pureQ-eps0.3")
     # pure_ql_agent_sm = QLearnerAgent(actions, explore="softmax", name="pureQ-sm")
     print "done."
+
+    trans_delayed_ql_agent = DelayedQLearnerAgent(actions, opt_q_func, name="DelayedQ-trans-max")
+
+    pure_delayed_ql_agent = DelayedQLearnerAgent(actions, opt_q_func, name="DelayedQ-vmax")
+    pure_delayed_ql_agent.set_vmax()
 
     # print "Optimal deterministic:"
     # print_policy(avg_mdp_vi.get_states(), vi_agent.policy)
     # quit()
 
-    print "transfer_ql_agent Q-function"
-    for x in transfer_ql_agent.q_func:
-        print (x)
-        for y in transfer_ql_agent.q_func[x]:
-            print (y, ':', transfer_ql_agent.q_func[x][y])
+#     print "transfer_ql_agent Q-function"
+#     for x in transfer_ql_agent.q_func:
+#         print (x)
+#         for y in transfer_ql_agent.q_func[x]:
+#             print (y, ':', transfer_ql_agent.q_func[x][y])
 
 #     print "transfer_ql_agent_maxq Q-function"
 #     for x in transfer_ql_agent_optq.q_func:
@@ -371,22 +369,23 @@ def main():
 #         for y in transfer_ql_agent_optq.q_func[x]:
 #             print (y, ':', transfer_ql_agent_optq.q_func[x][y])
 
-    print "transfer_ql_agent_avgq Q-function"
-    for x in transfer_ql_agent_avgq.q_func:
-        print (x)
-        for y in transfer_ql_agent_avgq.q_func[x]:
-            print (y, ':', transfer_ql_agent_avgq.q_func[x][y])
+#     print "transfer_ql_agent_avgq Q-function"
+#     for x in transfer_ql_agent_avgq.q_func:
+#         print (x)
+#         for y in transfer_ql_agent_avgq.q_func[x]:
+#             print (y, ':', transfer_ql_agent_avgq.q_func[x][y])
 
     # agents = [transfer_ql_agent, pure_ql_agent, transfer_ql_agent_eps, pure_ql_agent_eps,
     # agents = [pure_ql_agent, pure_ql_agent_opt,
     #           transfer_ql_agent_optq, transfer_ql_agent_avgq, transfer_fixed_agent, rand_agent]
-    agents = [pure_ql_agent, pure_ql_agent_opt, transfer_ql_agent_optq, transfer_ql_agent_avgq]
+    agents = [pure_ql_agent, pure_ql_agent_opt, transfer_ql_agent_optq, transfer_ql_agent,
+              pure_delayed_ql_agent, trans_delayed_ql_agent]
     # agents = [pure_ql_agent, transfer_ql_agent_avgq]
     # agents = [opt_belief_agent]
 
     # Run task.
     # TODO: Function for Learning on each MDP
-    run_agents_multi_task(agents, mdp_distr, task_samples=50, episodes=100, steps=100, reset_at_terminal=True, is_rec_disc_reward=False, cumulative_plot=False)
+    run_agents_multi_task(agents, mdp_distr, task_samples=50, episodes=1, steps=100, reset_at_terminal=True, is_rec_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
 
     # num_tasks = 5
     # for t in range(num_tasks):
@@ -394,4 +393,26 @@ def main():
     #     run_agents_on_mdp(agents, task)
 
 if __name__ == "__main__":
-    main()
+    # mdp_class = "chain"
+    # mdp_class = "random"
+    # mdp_class = "grid"
+    # mdp_class = "octo"
+    # mdp_class = "hall"
+    # mdp_class = "corridor"
+    # mdp_class = "pblocks_grid"
+    # mdp_class = "four_room"
+    # mdp_class = "hrooms"
+    # mdp_class = "rock"
+    # mdp_class = "taxi"
+    eps = 0.1
+    open_plot = False
+    main("chain", eps=eps, open_plot=open_plot)
+    main("random", eps=eps, open_plot=open_plot)
+    main("grid", eps=eps, open_plot=open_plot)
+    main("octo", eps=eps, open_plot=open_plot)
+    main("hall", eps=eps, open_plot=open_plot)
+    main("corridor", eps=eps, open_plot=open_plot)
+    main("pblocks_grid", eps=eps, open_plot=open_plot)
+    main("four_room", eps=eps, open_plot=open_plot)
+    main("hrooms", eps=eps, open_plot=open_plot)
+    
