@@ -260,9 +260,9 @@ def main():
     sys.stdout.flush()
     mdp_distr_copy = copy.deepcopy(mdp_distr)
     opt_stoch_policy = compute_optimal_stoch_policy(mdp_distr_copy)
-    opt_stoch_policy_agent = FixedPolicyAgent(opt_stoch_policy, name="$\pi_S$")
+    opt_stoch_policy_agent = FixedPolicyAgent(opt_stoch_policy, name="$\pi_{prior}$")
     opt_belief_agent = OptimalBeliefAgentClass.OptimalBeliefAgent(mdp_distr, actions)
-    vi_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="$\pi_D$")
+    vi_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="$\pi_{avg}$")
     # avg_v_agent = AvgVAgent(mdp_distr)
     rand_agent = RandomAgent(actions, name="$\pi^u$")
     ql_agent = QLearnerAgent(actions)
@@ -271,7 +271,7 @@ def main():
     agents = [vi_agent, opt_stoch_policy_agent, rand_agent, opt_belief_agent]
 
     # Run task.
-    run_agents_multi_task(agents, mdp_distr, task_samples=5, episodes=1, steps=100, reset_at_terminal=False, is_rec_disc_reward=False, cumulative_plot=False)
+    run_agents_multi_task(agents, mdp_distr, task_samples=50, episodes=1, steps=100, reset_at_terminal=False, is_rec_disc_reward=True, cumulative_plot=True)
 
 if __name__ == "__main__":
     main()
