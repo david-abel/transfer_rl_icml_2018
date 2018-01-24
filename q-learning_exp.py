@@ -353,6 +353,11 @@ def main(mdp_class="grid", eps=0.1, open_plot=True):
     pure_delayed_ql_agent = DelayedQLearnerAgent(actions, opt_q_func, name="DelayedQ-vmax")
     pure_delayed_ql_agent.set_vmax()
 
+
+    pure_rmax_agent = RMaxAgent(actions, name="RMAX-vmax")
+    trans_rmax_agent = RMaxAgent(actions, name="RMAX-trans_max")
+    trans_rmax_agent.set_q_function(opt_q_func)
+
     # print "Optimal deterministic:"
     # print_policy(avg_mdp_vi.get_states(), vi_agent.policy)
     # quit()
@@ -378,7 +383,9 @@ def main(mdp_class="grid", eps=0.1, open_plot=True):
     # agents = [transfer_ql_agent, pure_ql_agent, transfer_ql_agent_eps, pure_ql_agent_eps,
     # agents = [pure_ql_agent, pure_ql_agent_opt,
     #           transfer_ql_agent_optq, transfer_ql_agent_avgq, transfer_fixed_agent, rand_agent]
-    agents = [pure_ql_agent, pure_ql_agent_opt, transfer_ql_agent_optq, transfer_ql_agent,
+    agents = [pure_ql_agent, pure_ql_agent_opt,
+              transfer_ql_agent_optq, transfer_ql_agent,
+              pure_rmax_agent, trans_rmax_agent,
               pure_delayed_ql_agent, trans_delayed_ql_agent]
     # agents = [pure_ql_agent, transfer_ql_agent_avgq]
     # agents = [opt_belief_agent]
@@ -415,4 +422,4 @@ if __name__ == "__main__":
     main("pblocks_grid", eps=eps, open_plot=open_plot)
     main("four_room", eps=eps, open_plot=open_plot)
     main("hrooms", eps=eps, open_plot=open_plot)
-    
+
