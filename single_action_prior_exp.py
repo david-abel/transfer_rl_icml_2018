@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+'''
+single_action_prior_exp.py
+
+For running a single experiment comparing action prior policies in multitask RL.
+'''
+
 # Python imports.
 from collections import defaultdict
 import numpy as np
@@ -227,9 +233,10 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-mdp_class", type = str, default = "chain", nargs = '?', help = "Choose the mdp type (one of {octo, hall, grid, taxi, four_room}).")
     parser.add_argument("-goal_terminal", type = bool, default = False, nargs = '?', help = "Whether the goal is terminal.")
+    parser.add_argument("-samples", type = int, default = 100, nargs = '?', help = "Number of samples for the experiment.")
     args = parser.parse_args()
 
-    return args.mdp_class, args.goal_terminal
+    return args.mdp_class, args.goal_terminal, args.samples
 
 
 def main():
@@ -240,7 +247,7 @@ def main():
     # G ~ D : octo, four_room
     # T ~ D : grid
 
-    mdp_class, is_goal_terminal = parse_args()
+    mdp_class, is_goal_terminal, samples = parse_args()
 
     mdp_distr = make_mdp_distr(mdp_class=mdp_class, is_goal_terminal=is_goal_terminal)
     mdp_distr.set_gamma(0.9)
@@ -271,7 +278,7 @@ def main():
     agents = [vi_agent, opt_stoch_policy_agent, rand_agent, opt_belief_agent]
 
     # Run task.
-    run_agents_multi_task(agents, mdp_distr, task_samples=50, episodes=1, steps=100, reset_at_terminal=False, is_rec_disc_reward=True, cumulative_plot=True)
+    run_agents_multi_task(agents, mdp_distr, task_samples=samples, episodes=1, steps=100, reset_at_terminal=False, is_rec_disc_reward=True, cumulative_plot=True)
 
 if __name__ == "__main__":
     main()
