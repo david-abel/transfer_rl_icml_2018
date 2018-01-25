@@ -24,15 +24,15 @@ def main():
 
 	# R \sim D
 	spawn_subproc(task="chain", goal_terminal=False, samples=30)
-	# spawn_subproc(task="lava", goal_terminal=False)
+	spawn_subproc(task="lava", goal_terminal=False, samples=500)
 
 	# G \sim D
-	spawn_subproc(task="four_room", goal_terminal=True, samples=300)
+	spawn_subproc(task="four_room", goal_terminal=True, samples=500)
 	spawn_subproc(task="octo", goal_terminal=True, samples=300)
 
 	# R, T_d \sim D
-	# spawn_subproc(task="maze", goal_terminal=False)
-	spawn_subproc(task="combo_lock", goal_terminal=False, samples=100)
+	spawn_subproc(task="walls", goal_terminal=False, samples=100)
+	spawn_subproc(task="combo_lock", goal_terminal=False, samples=1000)
 
 if __name__ == "__main__":
 	main()

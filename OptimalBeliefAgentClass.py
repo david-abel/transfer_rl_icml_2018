@@ -2,9 +2,10 @@
 import copy
 
 # Other imports.
+from ThinWallGridMDPClass import ThinWallGridMDP
 from simple_rl.planning import ValueIteration
 from simple_rl.agents import Agent
-from action_prior_exp import compute_avg_mdp
+from single_action_prior_exp import compute_avg_mdp
 
 class OptimalBeliefAgent(Agent):
 
@@ -35,7 +36,7 @@ class OptimalBeliefAgent(Agent):
         if not state.is_terminal() and self.prev_action != None and len(self.active_mdp_distr.get_all_mdps()) > 1:
 
             # Remove falsifying MDPs.
-            mdps_to_remove = self._get_falsifying_mdps(reward)
+            mdps_to_remove = self._get_falsifying_mdps(reward, state)
             if len(mdps_to_remove) > 0:
                 self.active_mdp_distr.remove_mdps(mdps_to_remove)
                 # Update policy.
@@ -46,15 +47,24 @@ class OptimalBeliefAgent(Agent):
 
         return self.prev_action
 
-    def _get_falsifying_mdps(self, reward):
+    def _get_falsifying_mdps(self, reward, state, sample_rate=50):
         '''
         Args:
             reward (float)
+            state (simple_rl.State)
         '''
         falsified_mdps = []
 
         for mdp in self.active_mdp_distr.get_all_mdps():
-            if mdp.get_reward_func()(self.prev_state, self.prev_action) != reward:
+            # Grab r and s'.
+            mdp_reward = mdp.get_reward_func()(self.prev_state, self.prev_action)
+            mdp_next_state = mdp.get_transition_func()(self.prev_state, self.prev_action)
+
+            if isinstance(mdp, ThinWallGridMDP) and not (mdp_next_state == state):
+                falsified_mdps.append(mdp)
+                continue
+
+            if mdp_reward != mdp_reward: # and self.mdp_distr.get_num_mdps() - len(falsified_mdps) > 1:
                 falsified_mdps.append(mdp)
 
         return falsified_mdps

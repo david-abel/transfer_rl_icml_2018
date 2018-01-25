@@ -14,7 +14,6 @@ import copy
 import argparse
 
 # Other imports.
-from AvgVAgentClass import AvgVAgent
 from utils import make_mdp_distr
 from simple_rl.mdp import MDP, MDPDistribution
 from simple_rl.run_experiments import run_agents_multi_task, run_agents_on_mdp
@@ -250,7 +249,7 @@ def main():
     mdp_class, is_goal_terminal, samples = parse_args()
 
     mdp_distr = make_mdp_distr(mdp_class=mdp_class, is_goal_terminal=is_goal_terminal)
-    mdp_distr.set_gamma(0.9)
+    mdp_distr.set_gamma(0.99)
     actions = mdp_distr.get_actions()
 
     # Compute average MDP.
@@ -270,7 +269,6 @@ def main():
     opt_stoch_policy_agent = FixedPolicyAgent(opt_stoch_policy, name="$\pi_{prior}$")
     opt_belief_agent = OptimalBeliefAgentClass.OptimalBeliefAgent(mdp_distr, actions)
     vi_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="$\pi_{avg}$")
-    # avg_v_agent = AvgVAgent(mdp_distr)
     rand_agent = RandomAgent(actions, name="$\pi^u$")
     ql_agent = QLearnerAgent(actions)
     print "done."

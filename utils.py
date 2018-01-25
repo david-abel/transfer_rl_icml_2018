@@ -3,6 +3,7 @@ import itertools
 import random
 
 # Other imports
+from ThinWallGridMDPClass import ThinWallGridMDP
 from RockSampleMDPClass import RockSampleMDP
 from simple_rl.tasks import ChainMDP, GridWorldMDP, TaxiOOMDP, RandomMDP, FourRoomMDP, ComboLockMDP
 from simple_rl.tasks.grid_world.GridWorldMDPClass import make_grid_world_from_file
@@ -49,8 +50,9 @@ def make_mdp_distr(mdp_class, is_goal_terminal, mdp_size=11, horizon=0, gamma=0.
                     "spread":spread_goal_locs,
                     "tight":tight_goal_locs,
                     "chain":[0.0, 0.01, 0.1, 0.5, 1.0],
-                    "rock":[0.01, 0.1, 1.0, 5.0, 10.0],
-                    "combo":[[3,1,2],[3,2,1],[2,3,1],[3,3,1]]
+                    "combo_lock":[[3,1,2],[3,2,1],[2,3,1],[3,3,1]],
+                    "walls":make_wall_permutations(mdp_size),
+                    "lava":make_lava_permutations(mdp_size)
                     }
 
     # MDP Probability.
@@ -61,15 +63,15 @@ def make_mdp_distr(mdp_class, is_goal_terminal, mdp_size=11, horizon=0, gamma=0.
 
     for i in xrange(num_mdps):
 
-        new_mdp = {"octo":make_grid_world_from_file("octogrid.txt", num_goals=12, randomize=False, goal_num=i),
-                    "corridor":GridWorldMDP(width=20, height=1, init_loc=(10, 1), goal_locs=[changing_entities["corridor"][i % len(changing_entities["corridor"])]], is_goal_terminal=is_goal_terminal, name="corridor"),
-                    "grid":GridWorldMDP(width=width, height=height, rand_init=False, goal_locs=[changing_entities["grid"][i % len(changing_entities["grid"])]], is_goal_terminal=is_goal_terminal),
-                    "chain":ChainMDP(reset_val=changing_entities["chain"][i%len(changing_entities["chain"])]),
-                    "spread":GridWorldMDP(width=width, height=height, rand_init=False, goal_locs=[changing_entities["spread"][i % len(changing_entities["spread"])]], is_goal_terminal=is_goal_terminal, name="spread_grid"),
-                    "tight":GridWorldMDP(width=width, height=height, rand_init=False, goal_locs=[changing_entities["tight"][i % len(changing_entities["tight"])]], is_goal_terminal=is_goal_terminal, name="tight_grid"),
+        new_mdp = {"chain":ChainMDP(reset_val=changing_entities["chain"][i%len(changing_entities["chain"])]),
+                    "lava":GridWorldMDP(width=width, height=height, rand_init=False, lava_locs=changing_entities["lava"][i%len(changing_entities["lava"])], goal_locs=[(mdp_size-3, mdp_size-3)], is_goal_terminal=is_goal_terminal, name="lava_world", slip_prob=0.1),
                     "four_room":FourRoomMDP(width=width, height=height, goal_locs=[changing_entities["four_room"][i % len(changing_entities["four_room"])]], is_goal_terminal=is_goal_terminal),
-                    "rock":RockSampleMDP(rock_reward=changing_entities["rock"][i%len(changing_entities["rock"])]),
-                    "combo":ComboLockMDP(combo=changing_entities["combo"][i%len(changing_entities["combo"])])
+                    "octo":make_grid_world_from_file("octogrid.txt", num_goals=12, randomize=False, goal_num=i),
+                    "corridor":GridWorldMDP(width=20, height=1, init_loc=(10, 1), goal_locs=[changing_entities["corridor"][i % len(changing_entities["corridor"])]], is_goal_terminal=is_goal_terminal, name="corridor"),
+                    "walls":ThinWallGridMDP(width=width, height=height, walls=changing_entities["walls"][i%len(changing_entities["walls"])]),
+                    "combo_lock":ComboLockMDP(combo=changing_entities["combo_lock"][i%len(changing_entities["combo_lock"])]),
+                    "spread":GridWorldMDP(width=width, height=height, rand_init=False, goal_locs=[changing_entities["spread"][i % len(changing_entities["spread"])]], is_goal_terminal=is_goal_terminal, name="spread_grid"),
+                    "tight":GridWorldMDP(width=10, height=10, rand_init=False, goal_locs=[changing_entities["tight"][i % len(changing_entities["tight"])]], is_goal_terminal=is_goal_terminal, name="tight_grid"),
                     }[mdp_class]
 
         new_mdp.set_gamma(gamma)
@@ -77,3 +79,21 @@ def make_mdp_distr(mdp_class, is_goal_terminal, mdp_size=11, horizon=0, gamma=0.
         mdp_dist_dict[new_mdp] = mdp_prob
 
     return MDPDistribution(mdp_dist_dict, horizon=horizon)
+
+def make_wall_permutations(mdp_size):
+    wall_one = [[(3,1),(3,2)], [(3,6), (4,6)], [(4,4),(5,4)], [(6,5), (6,6)]]
+    wall_two = [[(5,1),(5,2)], [(3,4), (4,4)], [(4,2),(5,2)], [(7,5), (7,6)]]
+    wall_three = [[(2,1),(2,2)], [(4,7), (5,7)], [(3,3),(4,3)], [(4,5), (4,6)], [(7,5), (7,6)]]
+    wall_four = [[(4,1),(4,2)], [(3,5), (4,5)], [(5,4),(5,5)], [(6,6), (7,6)]]
+    wall_five = [[(3,3),(3,2)], [(4,6), (4,7)], [(7,2),(7,3)], [(6,5), (6,6)], [(3,4), (3,3)], [(2,5), (3,5)]]
+    walls = [wall_one, wall_two, wall_three, wall_four, wall_five]
+    return walls
+
+def make_lava_permutations(mdp_size):
+    lava_one = [(2,2), (3,3),(4,4),(6,2),(2,6)]
+    lava_two = [(4,1),(1,4),(2,5),(5,2),(7,7)]
+    lava_three = [(3,6), (3,6),(7,7),(9,8),(9,9)]
+    lava_four = [(5,5), (1,8),(8,2),(3,3),(4,3)]
+    lava_five = [(4,1), (2,1), (3,3), (4,3), (5,5), (6,6), (5,7), (4,5)]
+    lava_lists = [lava_one, lava_two, lava_three, lava_four, lava_five]
+    return lava_lists
