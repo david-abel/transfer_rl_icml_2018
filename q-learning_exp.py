@@ -5,6 +5,7 @@ from collections import defaultdict
 import numpy as np
 import sys
 import copy
+import argparse
 
 # Other imports.
 # import OptimalBeliefAgentClass
@@ -14,7 +15,24 @@ from simple_rl.mdp import MDP, MDPDistribution
 from simple_rl.run_experiments import run_agents_multi_task, run_agents_on_mdp
 from simple_rl.agents import RandomAgent, RMaxAgent, QLearnerAgent, FixedPolicyAgent, DelayedQLearnerAgent
 from simple_rl.planning.ValueIterationClass import ValueIteration
+from UpdatingRMaxAgentClass import UpdatingRMaxAgent
+from UpdatingDelayedQLearnerAgentClass import UpdatingDelayedQLearnerAgent
 
+
+def parse_args():
+    '''
+    Summary:
+        Parse all arguments
+    '''
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-mdp_class", type = str, default = "chain", nargs = '?', help = "Choose the mdp type (one of {octo, hall, grid, taxi, four_room}).")
+    parser.add_argument("-goal_terminal", type = bool, default = False, nargs = '?', help = "Whether the goal is terminal.")
+    parser.add_argument("-samples", type = int, default = 100, nargs = '?', help = "Number of samples for the experiment.")
+    parser.add_argument("-agent_type", type = str, default = False, nargs = '?', help = "Type of agents: (q, rmax, delayed-q).")
+    args = parser.parse_args()
+
+    return args.mdp_class, args.goal_terminal, args.samples, args.agent_type
+    
 
 def compute_avg_mdp(mdp_distr, sample_rate=5):
     '''
@@ -79,87 +97,87 @@ def compute_avg_mdp(mdp_distr, sample_rate=5):
 
     return avg_mdp
 
-def compute_optimal_stoch_policy(mdp_distr):
-    '''
-    Args:
-        mdp_distr (defaultdict)
+# def compute_optimal_stoch_policy(mdp_distr):
+#     '''
+#     Args:
+#         mdp_distr (defaultdict)
+# 
+#     Returns:
+#         (lambda)
+#     '''
+# 
+#     # Key: state
+#     # Val: dict
+#         # Key: action
+#         # Val: probability
+#     policy_dict = defaultdict(lambda : defaultdict(float))
+# 
+#     # Compute optimal policy for each MDP.
+#     for mdp in mdp_distr.get_all_mdps():
+#         # Solve the MDP and get the optimal policy.
+#         vi = ValueIteration(mdp, delta=0.001, max_iterations=1000)
+#         iters, value = vi.run_vi()
+#         vi_policy = vi.policy
+#         states = vi.get_states()
+# 
+#         # Compute the probability each action is optimal in each state.        
+#         prob_of_mdp = mdp_distr.get_prob_of_mdp(mdp)
+#         for s in states:
+#             a_star = vi_policy(s)
+#             policy_dict[s][a_star] += prob_of_mdp
+# 
+#     # Create the lambda.
+#     def policy_from_dict(state):
+#         action_id = np.random.multinomial(1, policy_dict[state].values()).tolist().index(1)
+#         action = policy_dict[state].keys()[action_id]
+# 
+#         return action
+# 
+#     return policy_from_dict
 
-    Returns:
-        (lambda)
-    '''
+# def make_base_a_list_from_number(number, base_a):
+#     '''
+#     Args:
+#         number (int): Base ten.
+#         base_a (int): New base to convert to.
+# 
+#     Returns:
+#         (list): Contains @number converted to @base_a.
+#     '''
+#     
+#     # Make a single 32 bit word.
+#     result = [0 for bit in range(32)]
+# 
+#     for i in range(len(result)-1, -1, -1):
+#         quotient, remainder = divmod(number,base_a**i)
+#         result[len(result) - i - 1] = quotient
+#         number = remainder
+# 
+#     # Remove trailing zeros before the number.
+#     first_non_zero_index = next((index for index, element in enumerate(result) if element > 0), None)
+# 
+#     return result[first_non_zero_index:]
 
-    # Key: state
-    # Val: dict
-        # Key: action
-        # Val: probability
-    policy_dict = defaultdict(lambda : defaultdict(float))
-
-    # Compute optimal policy for each MDP.
-    for mdp in mdp_distr.get_all_mdps():
-        # Solve the MDP and get the optimal policy.
-        vi = ValueIteration(mdp, delta=0.001, max_iterations=1000)
-        iters, value = vi.run_vi()
-        vi_policy = vi.policy
-        states = vi.get_states()
-
-        # Compute the probability each action is optimal in each state.        
-        prob_of_mdp = mdp_distr.get_prob_of_mdp(mdp)
-        for s in states:
-            a_star = vi_policy(s)
-            policy_dict[s][a_star] += prob_of_mdp
-
-    # Create the lambda.
-    def policy_from_dict(state):
-        action_id = np.random.multinomial(1, policy_dict[state].values()).tolist().index(1)
-        action = policy_dict[state].keys()[action_id]
-
-        return action
-
-    return policy_from_dict
-
-def make_base_a_list_from_number(number, base_a):
-    '''
-    Args:
-        number (int): Base ten.
-        base_a (int): New base to convert to.
-
-    Returns:
-        (list): Contains @number converted to @base_a.
-    '''
-    
-    # Make a single 32 bit word.
-    result = [0 for bit in range(32)]
-
-    for i in range(len(result)-1, -1, -1):
-        quotient, remainder = divmod(number,base_a**i)
-        result[len(result) - i - 1] = quotient
-        number = remainder
-
-    # Remove trailing zeros before the number.
-    first_non_zero_index = next((index for index, element in enumerate(result) if element > 0), None)
-
-    return result[first_non_zero_index:]
-
-def make_all_fixed_policies(states, actions):
-    '''
-    Args:
-        states (list)
-        actions (list)
-
-    Returns:
-        (list): Contains all deterministic policies.
-    '''
-    all_policies = defaultdict(list)
-
-    # Each policy is a length |S| list containing a number.
-    # That number indicates which action to take in the index-th state.
-
-    num_states = len(states)
-    num_actions = len(actions)
-
-    all_policies = [make_base_a_list_from_number(i,num_actions) for i in range(num_states**num_actions)]
-
-    return all_policies
+# def make_all_fixed_policies(states, actions):
+#     '''
+#     Args:
+#         states (list)
+#         actions (list)
+# 
+#     Returns:
+#         (list): Contains all deterministic policies.
+#     '''
+#     all_policies = defaultdict(list)
+# 
+#     # Each policy is a length |S| list containing a number.
+#     # That number indicates which action to take in the index-th state.
+# 
+#     num_states = len(states)
+#     num_actions = len(actions)
+# 
+#     all_policies = [make_base_a_list_from_number(i,num_actions) for i in range(num_states**num_actions)]
+# 
+#     return all_policies
 
 def make_policy_from_action_list(action_ls, actions, states):
     '''
@@ -191,27 +209,27 @@ def make_policy_from_action_list(action_ls, actions, states):
 
     return policy_func
 
-def get_all_fixed_policy_agents(mdp):
-    '''
-    Args:
-        mdp (MDP)
-
-    Returns:
-        (list of Agent)
-    '''
-    states = mdp.get_states()
-    actions = mdp.get_actions()
-
-    all_policies = make_all_fixed_policies(states, actions)
-    fixed_agents = []
-    for i, p in enumerate(all_policies):
-        policy = make_policy_from_action_str(p, actions, states)
-
-        next_agent = FixedPolicyAgent(policy, name="rand-fixed-policy-" + str(i))
-
-        fixed_agents.append(next_agent)
-
-    return fixed_agents
+# def get_all_fixed_policy_agents(mdp):
+#     '''
+#     Args:
+#         mdp (MDP)
+# 
+#     Returns:
+#         (list of Agent)
+#     '''
+#     states = mdp.get_states()
+#     actions = mdp.get_actions()
+# 
+#     all_policies = make_all_fixed_policies(states, actions)
+#     fixed_agents = []
+#     for i, p in enumerate(all_policies):
+#         policy = make_policy_from_action_str(p, actions, states)
+# 
+#         next_agent = FixedPolicyAgent(policy, name="rand-fixed-policy-" + str(i))
+# 
+#         fixed_agents.append(next_agent)
+# 
+#     return fixed_agents
 
 def print_policy(state_space, policy, sample_rate=5):
 
@@ -281,8 +299,10 @@ def compute_optimistic_q_function(mdp_distr, sample_rate=5):
 #     return avg_q_func
 
 
-def main(mdp_class="grid", eps=0.1, open_plot=True):
+def main(eps=0.1, open_plot=True):
 
+    mdp_class, is_goal_terminal, samples, alg = parse_args()
+    
     # Setup multitask setting.
     mdp_distr = make_mdp.make_mdp_distr(mdp_class=mdp_class)
     actions = mdp_distr.get_actions()
@@ -295,104 +315,45 @@ def main(mdp_class="grid", eps=0.1, open_plot=True):
     iters, value = avg_mdp_vi.run_vi()
 
     ### Yuu
-    # ValueIterationClass.py: Get Q-table from this: implement a function which returns Q table from V table.
-    # QLearnerAgentClass.py: Set q-table by set_q_function.
-    q_func = avg_mdp_vi.get_q_function()
-    transfer_ql_agent = QLearnerAgent(actions, epsilon=eps, name="Q-trans-avg")
-    transfer_ql_agent_eps = QLearnerAgent(actions, epsilon=0.3, name="transferQ-eps0.3")
-    # transfer_ql_agent_sm = QLearnerAgent(actions, explore="softmax", name="transferQ-sm")
-    transfer_ql_agent.set_q_function(q_func)
-    transfer_ql_agent_eps.set_q_function(q_func)
-    # transfer_ql_agent_sm.set_q_function(q_func)
 
     transfer_fixed_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="transferFixed")
-    
-    print "done." #, iters, value
-    sys.stdout.flush()
-
-    print "Optimistic Q Transfer"
-    opt_q_func = compute_optimistic_q_function(mdp_distr)
-    transfer_ql_agent_optq = QLearnerAgent(actions, epsilon=eps, name="Q-trans-max")
-    transfer_ql_agent_optq.set_q_function(opt_q_func)
-
-#     print "Pesimistic Q Transfer"
-#     pes_q_func = compute_pesimistic_q_function(mdp_distr)
-#     transfer_ql_agent_pesq = QLearnerAgent(actions, epsilon=eps, name="transferMinQ")
-#     transfer_ql_agent_pesq.set_q_function(pes_q_func)
-# 
-#     print "Average Q Transfer"
-#     avg_q_func = compute_average_q_function(mdp_distr)
-#     transfer_ql_agent_avgq = QLearnerAgent(actions, epsilon=0.1, name="transferAvgQ")
-#     transfer_ql_agent_avgq.set_q_function(avg_q_func)
-
-    #     print "Avg V..."
-    #     avg_val_vi = AvgValueIteration(mdp_distr)
-    #     avg_val_vi.run_vi()
-
-    # mdp_distr_copy = copy.deepcopy(mdp_distr)
-
-    # Agents.
-    print "Making agents...",
-    sys.stdout.flush()
-    # opt_stoch_policy = compute_optimal_stoch_policy(mdp_distr_copy)
-    # opt_stoch_policy_agent = FixedPolicyAgent(opt_stoch_policy, name="$\hat{\pi}_S^*$")
-    # opt_belief_agent = OptimalBeliefAgentClass.OptimalBeliefAgent(mdp_distr, actions)
-    # vi_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="$\hat{\pi}_D^*$")
-    # avg_v_vi_agent = FixedPolicyAgent(avg_val_vi.policy, name="$\hat{\pi}_V^*$")
     rand_agent = RandomAgent(actions, name="$\pi^u$")
-    pure_ql_agent = QLearnerAgent(actions, epsilon=eps, name="Q-0")
-    qmax = 1.0 * (1 - 0.99)
-    # qmax = 1.0
-    pure_ql_agent_opt = QLearnerAgent(actions, epsilon=eps, default_q=qmax, name="Q-vmax")
-    pure_ql_agent_eps = QLearnerAgent(actions, epsilon=0.3, name="pureQ-eps0.3")
-    # pure_ql_agent_sm = QLearnerAgent(actions, explore="softmax", name="pureQ-sm")
-    print "done."
 
-    trans_delayed_ql_agent = DelayedQLearnerAgent(actions, opt_q_func, name="DelayedQ-trans-max")
+    opt_q_func = compute_optimistic_q_function(mdp_distr)
+    avg_q_func = avg_mdp_vi.get_q_function()
 
-    pure_delayed_ql_agent = DelayedQLearnerAgent(actions, opt_q_func, name="DelayedQ-vmax")
-    pure_delayed_ql_agent.set_vmax()
+    if alg == "q":
+        pure_ql_agent = QLearnerAgent(actions, epsilon=eps, name="Q-0")
+        qmax = 1.0 * (1 - 0.99)
+        # qmax = 1.0
+        pure_ql_agent_opt = QLearnerAgent(actions, epsilon=eps, default_q=qmax, name="Q-vmax")
+        transfer_ql_agent_optq = QLearnerAgent(actions, epsilon=eps, name="Q-trans-max")
+        transfer_ql_agent_optq.set_init_q_function(opt_q_func)
+        transfer_ql_agent_avgq = QLearnerAgent(actions, epsilon=eps, name="Q-trans-avg")
+        transfer_ql_agent_avgq.set_init_q_function(avg_q_func)
 
-
-    pure_rmax_agent = RMaxAgent(actions, name="RMAX-vmax")
-    trans_rmax_agent = RMaxAgent(actions, name="RMAX-trans_max")
-    trans_rmax_agent.set_q_function(opt_q_func)
-
-    # print "Optimal deterministic:"
-    # print_policy(avg_mdp_vi.get_states(), vi_agent.policy)
-    # quit()
-
-#     print "transfer_ql_agent Q-function"
-#     for x in transfer_ql_agent.q_func:
-#         print (x)
-#         for y in transfer_ql_agent.q_func[x]:
-#             print (y, ':', transfer_ql_agent.q_func[x][y])
-
-#     print "transfer_ql_agent_maxq Q-function"
-#     for x in transfer_ql_agent_optq.q_func:
-#         print (x)
-#         for y in transfer_ql_agent_optq.q_func[x]:
-#             print (y, ':', transfer_ql_agent_optq.q_func[x][y])
-
-#     print "transfer_ql_agent_avgq Q-function"
-#     for x in transfer_ql_agent_avgq.q_func:
-#         print (x)
-#         for y in transfer_ql_agent_avgq.q_func[x]:
-#             print (y, ':', transfer_ql_agent_avgq.q_func[x][y])
-
-    # agents = [transfer_ql_agent, pure_ql_agent, transfer_ql_agent_eps, pure_ql_agent_eps,
-    # agents = [pure_ql_agent, pure_ql_agent_opt,
-    #           transfer_ql_agent_optq, transfer_ql_agent_avgq, transfer_fixed_agent, rand_agent]
-    agents = [pure_ql_agent, pure_ql_agent_opt,
-              transfer_ql_agent_optq, transfer_ql_agent,
-              pure_rmax_agent, trans_rmax_agent,
-              pure_delayed_ql_agent, trans_delayed_ql_agent]
-    # agents = [pure_ql_agent, transfer_ql_agent_avgq]
-    # agents = [opt_belief_agent]
-
+        agents = [pure_ql_agent, pure_ql_agent_opt,
+                  transfer_ql_agent_optq, transfer_ql_agent_avgq]
+    elif alg == "rmax":
+        pure_rmax_agent = RMaxAgent(actions, name="RMAX-vmax")
+        updating_trans_rmax_agent = UpdatingRMaxAgent(actions, name="RMAX-updating_max")
+        trans_rmax_agent = RMaxAgent(actions, name="RMAX-trans_max")
+        trans_rmax_agent.set_init_q_function(opt_q_func)
+        agents = [pure_rmax_agent, updating_trans_rmax_agent, trans_rmax_agent]
+    elif alg == "delayed-q":
+        pure_delayed_ql_agent = DelayedQLearnerAgent(actions, opt_q_func, name="DelayedQ-vmax")
+        pure_delayed_ql_agent.set_vmax()
+        updating_delayed_ql_agent = UpdatingDelayedQLearnerAgent(actions, name="DelayedQ-updating_max")
+        trans_delayed_ql_agent = DelayedQLearnerAgent(actions, opt_q_func, name="DelayedQ-trans-max")
+        agents = [pure_delayed_ql_agent, updating_delayed_ql_agent, trans_delayed_ql_agent]
+    else:
+        print "Unknown type of agents:", alg
+        print "(q, rmax, delayed-q)"
+        assert(False)
+        
     # Run task.
     # TODO: Function for Learning on each MDP
-    run_agents_multi_task(agents, mdp_distr, task_samples=50, episodes=1, steps=100, reset_at_terminal=True, is_rec_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
+    run_agents_multi_task(agents, mdp_distr, task_samples=samples, episodes=1, steps=100, reset_at_terminal=is_goal_terminal, is_rec_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
 
     # num_tasks = 5
     # for t in range(num_tasks):
@@ -400,26 +361,16 @@ def main(mdp_class="grid", eps=0.1, open_plot=True):
     #     run_agents_on_mdp(agents, task)
 
 if __name__ == "__main__":
-    # mdp_class = "chain"
-    # mdp_class = "random"
-    # mdp_class = "grid"
-    # mdp_class = "octo"
-    # mdp_class = "hall"
-    # mdp_class = "corridor"
-    # mdp_class = "pblocks_grid"
-    # mdp_class = "four_room"
-    # mdp_class = "hrooms"
-    # mdp_class = "rock"
-    # mdp_class = "taxi"
     eps = 0.1
     open_plot = False
-    main("chain", eps=eps, open_plot=open_plot)
-    main("random", eps=eps, open_plot=open_plot)
-    main("grid", eps=eps, open_plot=open_plot)
-    main("octo", eps=eps, open_plot=open_plot)
-    main("hall", eps=eps, open_plot=open_plot)
-    main("corridor", eps=eps, open_plot=open_plot)
-    main("pblocks_grid", eps=eps, open_plot=open_plot)
-    main("four_room", eps=eps, open_plot=open_plot)
-    main("hrooms", eps=eps, open_plot=open_plot)
+    main(eps=eps, open_plot=open_plot)
+    # main("chain", eps=eps, open_plot=open_plot)
+    # main("random", eps=eps, open_plot=open_plot)
+    # main("grid", eps=eps, open_plot=open_plot)
+    # main("octo", eps=eps, open_plot=open_plot)
+    # main("hall", eps=eps, open_plot=open_plot)
+    # main("corridor", eps=eps, open_plot=open_plot)
+    # main("pblocks_grid", eps=eps, open_plot=open_plot)
+    # main("four_room", eps=eps, open_plot=open_plot)
+    # main("hrooms", eps=eps, open_plot=open_plot)
 

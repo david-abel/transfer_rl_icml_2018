@@ -3,7 +3,7 @@
 # Python imports.
 import subprocess
 
-def spawn_subproc(task, agent_type, samples):
+def spawn_subproc(task, goal_terminal, samples, agent_type):
 	'''
 	Args:
 		task (str)
@@ -13,22 +13,21 @@ def spawn_subproc(task, agent_type, samples):
 	Summary:
 		Spawns a child subprocess to run the experiment.
 	'''
-	cmd = ['./single_learning_exp.py', \
-							'-mdp_class=' + str(task), \
-							'-agent_type=' + str(agent_type), \
-							'-samples=' + str(samples)]
-
+        cmd = ['./q-learning_exp.py', \
+	       '-mdp_class=' + str(task), \
+	       '-goal_terminal=' + str(goal_terminal), \
+	       '-samples=' + str(samples), \
+	       '-agent_type=' + str(agent_type)]
+        
 	subprocess.Popen(cmd)
 
 def main():
-
-	# Tight vs. Spread grid
-	spawn_subproc(task="tight", agent_type="rmax", samples=10)
-	spawn_subproc(task="spread", agent_type="rmax", samples=10)
-
+        tasks = ["chain", "four_room"]
+        agent_types = ["q"]
 	# QL
-	# spawn_subproc(task="four_room", agent_type="dql", samples=500)
-	# spawn_subproc(task="octo", agent_type="dql", samples=500)
+        for task in tasks:
+                for agent in agent_types:
+	                spawn_subproc(task=task, goal_terminal=False, samples=10, agent_type=agent)
 
 if __name__ == "__main__":
 	main()
