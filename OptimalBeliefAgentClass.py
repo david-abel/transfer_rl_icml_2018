@@ -64,7 +64,7 @@ class OptimalBeliefAgent(Agent):
                 falsified_mdps.append(mdp)
                 continue
 
-            if mdp_reward != mdp_reward: # and self.mdp_distr.get_num_mdps() - len(falsified_mdps) > 1:
+            if reward != mdp_reward: # and self.mdp_distr.get_num_mdps() - len(falsified_mdps) > 1:
                 falsified_mdps.append(mdp)
 
         return falsified_mdps

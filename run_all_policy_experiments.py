@@ -30,6 +30,9 @@ def main():
 	spawn_subproc(task="four_room", goal_terminal=True, samples=500)
 	spawn_subproc(task="octo", goal_terminal=True, samples=300)
 
+	# spawn_subproc(task="spread", goal_terminal=True, samples=100)
+	# spawn_subproc(task="tight", goal_terminal=True, samples=100)
+
 	# R, T_d \sim D
 	spawn_subproc(task="walls", goal_terminal=False, samples=100)
 	spawn_subproc(task="combo_lock", goal_terminal=False, samples=1000)
