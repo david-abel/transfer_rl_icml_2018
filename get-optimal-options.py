@@ -5,6 +5,7 @@
 from simple_rl.tasks import GridWorldMDP
 from simple_rl.planning import ValueIteration
 import pymzn
+import numpy as np
 
 def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
     # TODO: Assumes deterministic transition
@@ -59,7 +60,7 @@ def main():
     mdp = GridWorldMDP(width=3, height=3, goal_locs=[], slip_prob=0.0)  # goal_locs needs to be an empty list for our purpose.
 
     # Build a minizinc model
-    zinc_data = construct_singletask_data(mdp, [9], 0, 0)
+    zinc_data = construct_singletask_data(mdp, [9], 1, 0)
     print("zinc_data =", zinc_data)
 
     dzn = pymzn.dict2dzn(zinc_data)
@@ -71,13 +72,18 @@ def main():
     # f = open('grid.dzn', 'w')
     # f.write(dznout)
     # f.close()
-    s = pymzn.minizinc('options.mzn', data=zinc_data)
+    # sol_dzn = pymzn.minizinc('options.mzn', data=zinc_data, output_mode='dzn')
+    # print("sol_dzn=", sol_dzn)
 
-    print(s)
-    # print(s[0])
-    # print("Point options", s[0]['PO'])
+    # dict_dzn = pymzn.dzn2dict(sol_dzn)
+    # print("dict_dzn=", dict_dzn)
+
+    sol = pymzn.minizinc('options.mzn', data=zinc_data, output_mode='dict')
+    # print("sol=", sol)
+    # print("Point options", sol[0]['PO'])
+    option_model = np.array(sol[0]['PO'])
     # print("Subgoal options", s[0]['SO'])
-
+    # print("option_model=", option_model)
     
     # Value Iteration.
     # action_seq, state_seq = vi.plan(mdp.get_init_state())
