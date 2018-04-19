@@ -6,6 +6,7 @@ from simple_rl.tasks import GridWorldMDP
 from simple_rl.planning import ValueIteration
 import pymzn
 import numpy as np
+from subprocess import call, Popen, PIPE
 
 def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
     # TODO: Assumes deterministic transition
@@ -53,22 +54,15 @@ def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
     data = {'N': N, 'nGoals': nGoals, 'T': T, 'G': G, 'K': K, 'L': L}
     return data
 
-#def clean_zinc_data():
-#    pass
-
-def main():
-    mdp = GridWorldMDP(width=3, height=3, goal_locs=[], slip_prob=0.0)  # goal_locs needs to be an empty list for our purpose.
-
+def find_point_options(mdp, goals, nPO):
     # Build a minizinc model
-    zinc_data = construct_singletask_data(mdp, [9], 1, 0)
-    print("zinc_data =", zinc_data)
+    zinc_data = construct_singletask_data(mdp, goals, nPO, 0)
+    # print("zinc_data =", zinc_data)
 
-    dzn = pymzn.dict2dzn(zinc_data)
+    dzn = pymzn.dict2dzn(zinc_data, fout='grid.dzn')
     # Read in the file
-    print(dzn)
+    # print(dzn)
         
-    # print "##############"
-    # dznout = list(dzn).__str__().replace('set([','{').replace('])','}')
     # f = open('grid.dzn', 'w')
     # f.write(dznout)
     # f.close()
@@ -78,18 +72,38 @@ def main():
     # dict_dzn = pymzn.dzn2dict(sol_dzn)
     # print("dict_dzn=", dict_dzn)
 
-    sol = pymzn.minizinc('options.mzn', data=zinc_data, output_mode='dict')
-    # print("sol=", sol)
-    # print("Point options", sol[0]['PO'])
-    option_model = np.array(sol[0]['PO'])
-    # print("Subgoal options", s[0]['SO'])
-    # print("option_model=", option_model)
-    
-    # Value Iteration.
-    # action_seq, state_seq = vi.plan(mdp.get_init_state())
-    # print("Plan for", mdp)
-    # for i in range(len(action_seq)):
-    #     print("\t", action_seq[i], state_seq[i])
+    print("Running minizinc...")
+    call(["mzn-gecode", "options.mzn", "grid.dzn", "-o", "grid.ozn"])
+    print("done")
+    # p = Popen(["mzn-gecode", "options.mzn", "grid.dzn", "-o", "grid.ozn"], stdout=PIPE)
+    # output = p.communicate()
+    # print("output=", output)
 
+    options = []
+    
+    # print("grid.ozn=")
+    with open('grid.ozn', 'r') as ozn:
+        LN = 0
+        for line in ozn:
+            if LN >= nPO:
+                break
+            option = []
+            for word in line.split():
+                option.append(word)
+                # print(word)
+            options.append(option)
+            LN += 1
+
+    return options
+            
+def main():
+    mdp = GridWorldMDP(width=3, height=3, goal_locs=[], slip_prob=0.0)  # goal_locs needs to be an empty list for our purpose.
+
+    nPO = 2
+    options = find_point_options(mdp, [9], nPO)
+    for o in options:
+        print(o[0], " -> ", o[1], ", d = ", o[2])
+    
+            
 if __name__ == "__main__":
     main()
