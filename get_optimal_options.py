@@ -10,6 +10,17 @@ from subprocess import call, Popen, PIPE
 import networkx as nx
 from collections import defaultdict
 
+def get_term_id(mdp):
+    vi = ValueIteration(mdp)  # Use VI class to enumerate states
+    vi.run_vi()
+    vi._compute_matrix_from_trans_func()
+    state_space = vi.get_states()
+    for i, s in enumerate(state_space):
+        if s.is_terminal():
+            return i
+    print("no goals found")
+    return None
+
 def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
     # TODO: Assumes deterministic transition
     # TODO: Assumes single task planning
@@ -25,6 +36,7 @@ def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
     N = len(trans_matrix)  # Number of states
     nGoals = len(goals)
     T = []
+    Topt = []
 
     print("N:", N)
     print("nGoals:", nGoals)
@@ -34,8 +46,10 @@ def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
         state_id[u] = i + 1
 
     for i, u in enumerate(trans_matrix):
-        T.append(set())
-        # print(u, "acitons =", len(trans_matrix[u]))
+        T.append([0] * N)
+        Topt.append([0] * N)
+        best_qval = -float("inf")
+        best_actions = []
         for j, a in enumerate(trans_matrix[u]):
             # print(u, a, "resulting states =", len(trans_matrix[u][a]))
             for k, v in enumerate(trans_matrix[u][a]):
@@ -43,17 +57,29 @@ def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
                 if trans_matrix[u][a][v] > 0:
                     # print("FROM", i + 1, "to", k + 1)
                     # if state_id[v] not in T[i]:
-                    T[i].add(state_id[v])  # Node index starts from 1 (Minizinc is 1-indexed language)
-        # print("T[", i, "] =", T[i])
-        # Ti_str = list(T[i]).__str__().replace('set([','{').replace('])','}')
-        # T[i] = Ti_str
+                    T[i][state_id[v]-1] = 1  # Node index starts from 1 (Minizinc is 1-indexed language)            
+            qval = vi.get_q_value(u, a)
+            if qval > best_qval:
+                best_qval = qval
+                best_actions = [a]
+            elif qval == best_qval:
+                best_actions.append(a)
 
+        print("best_actions =", best_actions)
+        for a in best_actions:
+            for k, v in enumerate(trans_matrix[u][a]):
+                # print(u, a, v, "=", trans_matrix[u][a][v])
+                if trans_matrix[u][a][v] > 0:
+                    # print("FROM", i + 1, "to", k + 1)
+                    # if state_id[v] not in T[i]:
+                    Topt[i][state_id[v]-1] = 1  # Node index starts from 1 (Minizinc is 1-indexed language)            
+    
     # TODO: convert states to ids
     G = goals
 
     K = nPO
     L = nSO
-    data = {'N': N, 'nGoals': nGoals, 'T': T, 'G': G, 'K': K, 'L': L}
+    data = {'N': N, 'nGoals': nGoals, 'T': Topt, 'G': G, 'K': K, 'L': L}
     return data
 
 def find_point_options(mdp, goals, nPO):
@@ -194,18 +220,18 @@ def find_betweenness_options(mdp, t=0.1):
     return filtered_subgoals, initiation_sets
 
 def main():
-    mdp = GridWorldMDP(width=1, height=6, goal_locs=[], slip_prob=0.0)  # goal_locs needs to be an empty list for our purpose.
-    betw_options, init_sets = find_betweenness_options(mdp, 0.1)
-
-    for i, o in enumerate(betw_options):
-        print("Option ", i)
-        print("init=", init_sets[o])
-        print("goal=", o)
-
-    # nPO = 1
-    # options = find_point_options(mdp, [0], nPO)
-    # for o in options:
-    #     print(o[0], " -> ", o[1], ", d = ", o[2])
+    mdp = GridWorldMDP(width=3, height=6, init_loc=(1, 1), goal_locs=[(1, 6)], slip_prob=0.0)  # goal_locs needs to be an empty list for our purpose.
+    # betw_options, init_sets = find_betweenness_options(mdp, 0.1)
+    term_id = get_term_id(mdp)
+    print("term-id=", term_id)
+    #for i, o in enumerate(betw_options):
+    #    print("Option ", i)
+    #    print("init=", init_sets[o])
+    #    print("goal=", o)
+    nPO = 1
+    options = find_point_options(mdp, [term_id], nPO)
+    for o in options:
+        print(o[0], " -> ", o[1])
     
             
 if __name__ == "__main__":
