@@ -144,12 +144,11 @@ solve minimize avg_eccentricity;
 
 % solve minimize sum_diameter;
 
-output [show(PO_from[k]) ++ " " ++ show(PO_to[k]) ++ " " ++ show(PO_dist[k]) ++ "\n"| k in po];
-% output ["d[" ++ show(n) ++ "," ++ show(g) ++ "] = " ++ show(d[n, g]) ++ "\n" | g in Goals, n in Nodes] ++
-%       ["diameter[" ++ show(g) ++ "] = " ++ show(eccentricity[g]) ++ "\n" | g in Goals] ++
-%       ["exp diam = " ++ show(avg_eccentricity) ++ "\n"] ++
-%       ["PO = " ++ show(PO) ++ "\n"] ++
-%       ["PO = " ++ show(PO_from[k]) ++ " -> " ++ show(PO_to[k]) ++ ", d = " ++ show(PO_dist[k]) ++ "\n" | k in po] ++ 
-%       ["SO = " ++ show(SO) ++ "\n"];       
-              %["avg-avg distance = " ++ show(avg_avg_distance) ++ "\n"] ++
-       %["average distance[" ++ show(g) ++ "] = " ++ show(avg_distance[g]) ++ "\n" | g in Goals] ++
+output [show(PO_from[k]) ++ " " ++ show(PO_to[k]) ++ " " ++ show(PO_dist[k]) ++ "\n"| k in po] ++
+  ["d[" ++ show(n) ++ "," ++ show(g) ++ "] = " ++ show(d[n, g]) ++ "\n" | g in Goals, n in Nodes] ++
+  ["diameter[" ++ show(g) ++ "] = " ++ show(eccentricity[g]) ++ "\n" | g in Goals] ++
+  ["exp diam = " ++ show(avg_eccentricity) ++ "\n"] ++
+  ["PO = " ++ show(PO) ++ "\n"] ++
+  ["SO = " ++ show(SO) ++ "\n"];
+%  ["avg-avg distance = " ++ show(avg_avg_distance) ++ "\n"] ++
+%  ["average distance[" ++ show(g) ++ "] = " ++ show(avg_distance[g]) ++ "\n" | g in Goals];

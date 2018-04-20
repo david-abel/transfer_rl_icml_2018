@@ -56,8 +56,9 @@ def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
 
 def find_point_options(mdp, goals, nPO):
     # Build a minizinc model
-    zinc_data = construct_singletask_data(mdp, goals, nPO, 0)
-    # print("zinc_data =", zinc_data)
+    goals_ = [x+1 for x in goals]
+    zinc_data = construct_singletask_data(mdp, goals_, nPO, 0)
+    print("Input model =", zinc_data)
 
     dzn = pymzn.dict2dzn(zinc_data, fout='grid.dzn')
     # Read in the file
@@ -100,7 +101,7 @@ def main():
     mdp = GridWorldMDP(width=3, height=3, goal_locs=[], slip_prob=0.0)  # goal_locs needs to be an empty list for our purpose.
 
     nPO = 2
-    options = find_point_options(mdp, [9], nPO)
+    options = find_point_options(mdp, [8,9], nPO)
     for o in options:
         print(o[0], " -> ", o[1], ", d = ", o[2])
     
