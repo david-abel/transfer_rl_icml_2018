@@ -18,11 +18,11 @@ from simple_rl.abstraction.action_abs.PredicateClass import Predicate
 from simple_rl.abstraction.action_abs.InListPredicateClass import InListPredicate
 from simple_rl.abstraction.action_abs.OptionClass import Option
 from simple_rl.abstraction.action_abs.PolicyFromDictClass import PolicyFromDict
-from get_optimal_options import find_point_options
+from get_optimal_options import find_point_options, find_betweenness_options
 
 import matplotlib.pyplot as plt
 
-def make_point_based_options(mdp_distr, num_options=1):
+def make_optimal_point_options(mdp_distr, mdp_nogoal, num_options=1):
     '''
     Args:
         mdp_distr (MDPDistribution)
@@ -30,9 +30,6 @@ def make_point_based_options(mdp_distr, num_options=1):
     Returns:
         (list): Contains Option instances.
     '''
-
-    # TODO: generate an MDP with no goal automatically.
-    mdp_nogoal = GridWorldMDP(width=2, height=4, init_loc=(1, 1), goal_locs=[])
     
     # Get all goal states.
     goal_list = set([])
@@ -66,63 +63,114 @@ def make_point_based_options(mdp_distr, num_options=1):
         # print("term_s = ", term_s)
         init_predicate = Predicate(func=lambda x: x == init_s)
         term_predicate = Predicate(func=lambda x: x == term_s)
+        # TODO: Option policy should be to a shortest path to the goal
         o = Option(init_predicate=init_predicate,
                     term_predicate=term_predicate,
-                    policy=aa_helpers._make_mini_mdp_option_policy(mdp),
+                    policy=aa_helpers._make_mini_mdp_option_policy(mdp_distr.get_all_mdps()[0]),
                     term_prob=0.0)
         options.append(o)
     
     return options
 
+def make_betweenness_options(mdp_distr, mdp_nogoal, t=0.1, num_options=1):
+    terminal_states, init_sets = find_betweenness_options(mdp_nogoal, t)
+    vi = ValueIteration(mdp_nogoal)
+    state_space = vi.get_states()
+
+    options = []
+    
+    for o in terminal_states:
+        print("terminal=", state_space[o])
+        init_s = []
+
+        print("init=")
+        for i in init_sets[o]:
+            init_s.append(state_space[i])
+            print("   ", state_space[i])
+        init_predicate = Predicate(func=lambda x: x in init_s)
+        term_predicate = Predicate(func=lambda x: x == state_space[o])
+        # TODO: Option policy should be to a shortest path to the goal
+        o = Option(init_predicate=init_predicate,
+                    term_predicate=term_predicate,
+                    policy=aa_helpers._make_mini_mdp_option_policy(mdp_distr.get_all_mdps()[0]),
+                    term_prob=0.0)
+        options.append(o)
+
+    return options
+        
 def planning_experiments(open_plot=True):
     '''
     Summary:
         Runs an Option planner on a simple FourRoomMDP distribution vs. regular ValueIteration.
     '''
 
+    mdp_nogoal = GridWorldMDP(width=2, height=5, init_loc=(1, 1), goal_locs=[])
+
     # Setup MDP, Agents.
-    mdp1 = GridWorldMDP(width=2, height=4, init_loc=(1, 1), goal_locs=[(2, 4)])
+    mdp1 = GridWorldMDP(width=2, height=5, init_loc=(1, 1), goal_locs=[(2, 4)])
     mdp_distr = MDPDistribution({mdp1:1.0})
     # mdp2 = GridWorldMDP(width=2, height=4, init_loc=(1, 1), goal_locs=[(2, 0)])
     # mdp_distr = MDPDistribution({mdp1:0.5, mdp2:0.5})
     # Make goal-based option agent.
-    point_options = make_point_based_options(mdp_distr)
+    point_options = make_optimal_point_options(mdp_distr, mdp_nogoal)
     point_aa = ActionAbstraction(prim_actions=mdp_distr.get_actions(), options=point_options)
 
-    opt_data = {"val":0, "iters":0, "time":0}
+    bet_options = make_betweenness_options(mdp_distr, mdp_nogoal)
+    bet_aa = ActionAbstraction(prim_actions=mdp_distr.get_actions(), options=bet_options)
+     
+    print(len(point_options), " point options")
+    print(len(bet_options), " bet options")
+    
+    po_data = {"val":0, "iters":0, "time":0}
+    bet_data = {"val":0, "iters":0, "time":0}
     regular_data = {"val":0, "iters":0, "time":0}
 
     for mdp in mdp_distr.get_all_mdps():
         mdp_prob = mdp_distr.get_prob_of_mdp(mdp)
 
         # Make VIs.
-        option_vi = AbstractValueIteration(ground_mdp=mdp, action_abstr=point_aa, bootstrap=False)
+        po_vi = AbstractValueIteration(ground_mdp=mdp, action_abstr=point_aa, bootstrap=False)
+        bet_vi = AbstractValueIteration(ground_mdp=mdp, action_abstr=bet_aa, bootstrap=False)
         regular_vi = ValueIteration(mdp, bootstrap=False)
 
         # Run and time VI.
         start_time = time.clock()
-        opt_iters, opt_val, opt_diff_hist = option_vi.run_vi_hist()
-        opt_time = round(time.clock() - start_time, 4)
+        po_iters, po_val, po_diff_hist = po_vi.run_vi_hist()
+        po_time = round(time.clock() - start_time, 4)
+        print("po done")
 
+        start_time = time.clock()
+        bet_iters, bet_val, bet_diff_hist = bet_vi.run_vi_hist()
+        bet_time = round(time.clock() - start_time, 4)
+        print("bet done")
+        
         start_time = time.clock()
         iters, val, diff_hist = regular_vi.run_vi_hist()
         regular_time = round(time.clock() - start_time, 4)
+        print("prim done")
 
 
         # Add relevant data.
-        opt_data["val"] += opt_val * mdp_prob
-        opt_data["iters"] += opt_iters * mdp_prob
-        opt_data["time"] += opt_time * mdp_prob
+        po_data["val"] += po_val * mdp_prob
+        po_data["iters"] += po_iters * mdp_prob
+        po_data["time"] += po_time * mdp_prob
+
+        bet_data["val"] += bet_val * mdp_prob
+        bet_data["iters"] += bet_iters * mdp_prob
+        bet_data["time"] += bet_time * mdp_prob
 
         regular_data["val"] += val * mdp_prob
         regular_data["iters"] += iters * mdp_prob
         regular_data["time"] += regular_time * mdp_prob
 
-    print("Options:\n\t val :", round(opt_data["val"],3), "\n\t iters :", round(opt_data["iters"],3), "\n\t time (s) :", round(opt_data["time"],3), "\n")
+    print("Optimal Point Options:\n\t val :", round(po_data["val"],3), "\n\t iters :", round(po_data["iters"],3), "\n\t time (s) :", round(po_data["time"],3), "\n")
+    print("Betweenness Options:\n\t val :", round(bet_data["val"],3), "\n\t iters :", round(bet_data["iters"],3), "\n\t time (s) :", round(bet_data["time"],3), "\n")
     print("Regular VI:\n\t val :", round(regular_data["val"],3), "\n\t iters :", round(regular_data["iters"],3), "\n\t time (s) :", round(regular_data["time"],3))
-    print("Options bellman errors =", opt_diff_hist)
+    print("Optimal Point Options bellman errors =", po_diff_hist)
+    print("Betweenness Options bellman errors =", bet_diff_hist)
     print("Actions bellman errors =", diff_hist)
-    plt.plot(opt_diff_hist)
+    plt.plot(po_diff_hist)
+    plt.plot(bet_diff_hist)
     plt.plot(diff_hist)
     plt.show()
 

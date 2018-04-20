@@ -77,7 +77,8 @@ def find_point_options(mdp, goals, nPO):
 
     print("Running minizinc...")
     # TODO: find a good solver
-    call(["mzn-g12fd", "--fzn-flags", "\"--time 60\"", "options.mzn", "grid.dzn", "-o", "grid.ozn"])
+    call(["mzn-g12fd", "options.mzn", "grid.dzn", "-o", "grid.ozn"])
+    # call(["mzn-g12fd", "--fzn-flags", "\"--time 60\"", "options.mzn", "grid.dzn", "-o", "grid.ozn"])
     print("done")
     # p = Popen(["mzn-gecode", "options.mzn", "grid.dzn", "-o", "grid.ozn"], stdout=PIPE)
     # output = p.communicate()
