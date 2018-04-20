@@ -1,10 +1,9 @@
 include "globals.mzn";
 
-
-int: maxD = 100; % an upper bound of the diameter TODO: can remove?
-
 int: N;      % Number of nodes
 int: nGoals; % Number of goals (multitask setting) % TODO: multiple goal for a single task
+
+int: maxD = N; % an upper bound of the diameter TODO: can remove?
 
 set of int: Nodes = 1..N;
 array[Nodes] of set of 1..N: T; % State transition model by primitive actions. j in T[i] means e(i, j) exists.
@@ -16,10 +15,10 @@ array[Nodes, Nodes] of var 0..maxD: d_g; % d[s, g] is a path distance from node 
 array[Nodes, Goals] of var 0..maxD: d; % d[s, g] is a path distance from node s to a g-th goal with option model.
 
 array[Goals] of var 0..maxD: eccentricity; % maximum path distance for each goal
-var float: avg_eccentricity;  % Sum of diameters (multitask)
+var int: sum_eccentricity;  % Sum of diameters (multitask)
 
-array[Goals] of var float: avg_distance;
-var float: avg_avg_distance;  % Sum of diameters (multitask)
+array[Goals] of var int: sum_distance;
+var int: sum_sum_distance;  % Sum of diameters (multitask)
 
 /*
   Functions
@@ -71,10 +70,10 @@ constraint
     )  
   );
   
-constraint
-  forall (k in 1..K) (
-      PO_dist[k] = d_g[PO_from[k], PO_to[k]]
- );
+% constraint
+%   forall (k in 1..K) (
+%       PO_dist[k] = d_g[PO_from[k], PO_to[k]]
+%  );
   
 % constraint
 %   forall (i in 1..N) (
@@ -101,16 +100,16 @@ constraint card(SO) <= L; % Constraint: the number of subgoal options is at most
 /*
   MDP model
 */
-constraint
-  forall (j in 1..N) (
-    forall ( i in 1..N ) (
-      if i == j then
-        d_g[i, j] = 0
-      else
-        d_g[i, j] = min(getChildDistsNoOp(d_g, T, i, j)) + 1
-    endif
-    )
-  );
+% constraint
+%   forall (j in 1..N) (
+%     forall ( i in 1..N ) (
+%       if i == j then
+%         d_g[i, j] = 0
+%       else
+%         d_g[i, j] = min(getChildDistsNoOp(d_g, T, i, j)) + 1
+%     endif
+%     )
+%   );
 
 % Model with options
 constraint
@@ -137,17 +136,17 @@ constraint
 %     avg_distance[g] = sum(col(d, g)) / N
 %   );
 
-constraint avg_eccentricity = sum(eccentricity) / nGoals;
+constraint sum_eccentricity = sum(eccentricity);
 %constraint avg_avg_distance = sum(avg_distance) / nGoals;
 
-solve minimize avg_eccentricity;
+solve minimize sum_eccentricity;
 
 % solve minimize sum_diameter;
 
 output [show(PO_from[k]) ++ " " ++ show(PO_to[k]) ++ " " ++ show(PO_dist[k]) ++ "\n"| k in po] ++
   ["d[" ++ show(n) ++ "," ++ show(g) ++ "] = " ++ show(d[n, g]) ++ "\n" | g in Goals, n in Nodes] ++
   ["diameter[" ++ show(g) ++ "] = " ++ show(eccentricity[g]) ++ "\n" | g in Goals] ++
-  ["exp diam = " ++ show(avg_eccentricity) ++ "\n"] ++
+  ["sum(eccentricity) = " ++ show(sum_eccentricity) ++ "\n"] ++
   ["PO = " ++ show(PO) ++ "\n"] ++
   ["SO = " ++ show(SO) ++ "\n"];
 %  ["avg-avg distance = " ++ show(avg_avg_distance) ++ "\n"] ++

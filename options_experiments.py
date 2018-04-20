@@ -32,7 +32,7 @@ def make_point_based_options(mdp_distr, num_options=1):
     '''
 
     # TODO: generate an MDP with no goal automatically.
-    mdp_nogoal = GridWorldMDP(width=3, height=4, init_loc=(1, 1), goal_locs=[])
+    mdp_nogoal = GridWorldMDP(width=2, height=4, init_loc=(1, 1), goal_locs=[])
     
     # Get all goal states.
     goal_list = set([])
@@ -57,7 +57,7 @@ def make_point_based_options(mdp_distr, num_options=1):
     option_models = find_point_options(mdp_nogoal, goals, num_options)
     options = []
     for o in option_models:
-        print(o[0], "->", o[1])
+        print("PO: ", o[0], "->", o[1])
         # print("o[0] =", o[0], type(o[0]))
         # print("o[1] =", o[1], type(o[1]))
         init_s = state_space[int(o[0]) - 1]
@@ -81,8 +81,10 @@ def planning_experiments(open_plot=True):
     '''
 
     # Setup MDP, Agents.
-    mdp = GridWorldMDP(width=3, height=4, init_loc=(1, 1), goal_locs=[(2, 4)])
-    mdp_distr = MDPDistribution({mdp:1.0})
+    mdp1 = GridWorldMDP(width=2, height=4, init_loc=(1, 1), goal_locs=[(2, 4)])
+    mdp_distr = MDPDistribution({mdp1:1.0})
+    # mdp2 = GridWorldMDP(width=2, height=4, init_loc=(1, 1), goal_locs=[(2, 0)])
+    # mdp_distr = MDPDistribution({mdp1:0.5, mdp2:0.5})
     # Make goal-based option agent.
     point_options = make_point_based_options(mdp_distr)
     point_aa = ActionAbstraction(prim_actions=mdp_distr.get_actions(), options=point_options)
