@@ -18,6 +18,20 @@ from simple_rl.abstraction.action_abs.InListPredicateClass import InListPredicat
 from simple_rl.abstraction.action_abs.OptionClass import Option
 from simple_rl.abstraction.action_abs.PolicyFromDictClass import PolicyFromDict
 
+def compute_voronoi_state_set(mdp_distr, num_states):
+    '''
+    Args:
+        mdp_distr (MDPDistribution)
+        num_states (int)
+
+    Returns:
+        (list) of states.
+    '''
+    state_space = mdp_distr.get_all_mdps()[0].get_states()
+
+    # TODO: implement the voronoi algorithmn to compute the @num_states that are closest
+    # to all others?
+
 def make_point_based_options(mdp_distr, num_options=1):
     '''
     Args:
@@ -37,7 +51,7 @@ def make_point_based_options(mdp_distr, num_options=1):
                 goal_list.add(s)
 
     # Need to compute init states.
-
+    # init_state_set = 
 
     # Make options from each init to each goal.
     options = []
@@ -86,7 +100,6 @@ def planning_experiments(open_plot=True):
         iters, val = regular_vi.run_vi()
         regular_time = round(time.clock() - start_time, 4)
 
-
         # Add relevant data.
         opt_data["val"] += opt_val * mdp_prob
         opt_data["iters"] += opt_iters * mdp_prob
@@ -117,10 +130,11 @@ def learning_experiments(open_plot=True):
     option_agent = AbstractionWrapper(QLearningAgent, actions=mdp_distr.get_actions(), action_abstr=point_aa)
 
     # Run experiment and make plot.
-    run_agents_lifelong([ql_agent, rand_agent, option_agent], mdp_distr, samples=5, episodes=100, steps=150, open_plot=open_plot)
+    run_agents_lifelong([ql_agent, rand_agent, option_agent], mdp_distr, samples=5, episodes=100, steps=250, open_plot=open_plot)
 
 def main(open_plot=True):
     planning_experiments(open_plot)
+    # learning_experiments(open_plot)
 
 if __name__ == "__main__":
     main(open_plot=not sys.argv[-1] == "no_plot")
