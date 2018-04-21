@@ -65,7 +65,7 @@ def construct_singletask_data(mdp, goals, nPO=0, nSO=0):
             elif qval == best_qval:
                 best_actions.append(a)
 
-        print("best_actions =", best_actions)
+        # print("best_actions =", best_actions)
         for a in best_actions:
             for k, v in enumerate(trans_matrix[u][a]):
                 # print(u, a, v, "=", trans_matrix[u][a][v])
@@ -162,16 +162,16 @@ def find_betweenness_options(mdp, t=0.1):
     #########################
     subgoal_set = []
     for s in G.nodes():
-        print("s=", s)
+        # print("s=", s)
         csv = nx.betweenness_centrality_subset(G, sources=[s], targets=G.nodes())
         # csv = nx.betweenness_centrality(G)
-        print("csv=", csv)
+        # print("csv=", csv)
         for v in csv:
             if (s is not v) and (csv[v] / (N-2) > t) and (v not in subgoal_set):
                 subgoal_set.append(v)
 
-    for s in subgoal_set:
-        print(s, " is subgoal")
+    # for s in subgoal_set:
+    #     print(s, " is subgoal")
     # n_subgoals = sum(subgoal_set)
     # print(n_subgoals, "goals in total")
     # centralities = nx.betweenness_centrality(G)
@@ -193,8 +193,8 @@ def find_betweenness_options(mdp, t=0.1):
                 score += csg[s]
         support_scores[g] = score
                 
-    for g in subgoal_set:
-        print("init set for ", g, " = ", initiation_sets[g])
+    # for g in subgoal_set:
+    #     print("init set for ", g, " = ", initiation_sets[g])
 
     #########################
     ## 3. Filter subgoals according to their supports

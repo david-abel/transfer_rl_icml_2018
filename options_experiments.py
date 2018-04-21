@@ -51,7 +51,7 @@ def make_optimal_point_options(mdp_distr, mdp_nogoal, num_options=1):
     vi = ValueIteration(mdp_nogoal)
     state_space = vi.get_states()
     
-    option_models = find_point_options(mdp_nogoal, goals, num_options)
+    option_models = find_point_options(mdp_distr.get_all_mdps()[0], goals, num_options)
     options = []
     for o in option_models:
         print("PO: ", o[0], "->", o[1])
@@ -129,20 +129,32 @@ def planning_experiments(open_plot=True):
         mdp_prob = mdp_distr.get_prob_of_mdp(mdp)
 
         # Make VIs.
+        test_vi = AbstractValueIteration(ground_mdp=mdp, bootstrap=False)
+        po_iters, po_val, po_diff_hist = test_vi.run_vi_hist()
+        print("po done")
+        print(test_vi.value_func)
+        exit(0)
+        
+
         po_vi = AbstractValueIteration(ground_mdp=mdp, action_abstr=point_aa, bootstrap=False)
         bet_vi = AbstractValueIteration(ground_mdp=mdp, action_abstr=bet_aa, bootstrap=False)
         regular_vi = ValueIteration(mdp, bootstrap=False)
 
         # Run and time VI.
+        print("############################")
+        # print("actions=", po_vi.actions)
         start_time = time.clock()
         po_iters, po_val, po_diff_hist = po_vi.run_vi_hist()
         po_time = round(time.clock() - start_time, 4)
         print("po done")
+        print(po_vi.value_func)
+        exit(0)
 
         start_time = time.clock()
         bet_iters, bet_val, bet_diff_hist = bet_vi.run_vi_hist()
         bet_time = round(time.clock() - start_time, 4)
         print("bet done")
+        print(bet_vi.value_func)
         
         start_time = time.clock()
         iters, val, diff_hist = regular_vi.run_vi_hist()
@@ -166,13 +178,16 @@ def planning_experiments(open_plot=True):
     print("Optimal Point Options:\n\t val :", round(po_data["val"],3), "\n\t iters :", round(po_data["iters"],3), "\n\t time (s) :", round(po_data["time"],3), "\n")
     print("Betweenness Options:\n\t val :", round(bet_data["val"],3), "\n\t iters :", round(bet_data["iters"],3), "\n\t time (s) :", round(bet_data["time"],3), "\n")
     print("Regular VI:\n\t val :", round(regular_data["val"],3), "\n\t iters :", round(regular_data["iters"],3), "\n\t time (s) :", round(regular_data["time"],3))
+    
     print("Optimal Point Options bellman errors =", po_diff_hist)
     print("Betweenness Options bellman errors =", bet_diff_hist)
     print("Actions bellman errors =", diff_hist)
     plt.plot(po_diff_hist)
     plt.plot(bet_diff_hist)
     plt.plot(diff_hist)
-    plt.show()
+    # plt.show()
+
+    
 
 #def learning_experiments(open_plot=True):
 #    '''
