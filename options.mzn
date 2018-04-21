@@ -26,8 +26,8 @@ var int: sum_sum_distance;  % Sum of diameters (multitask)
 % getChildDists: Given a node (from), return an array of distances of its child nodes to a goal.
 % p: Point option
 % s: Subgoal option
-function array[int] of var int: getChildDists(array[int, int] of var int: dist, array[int,int] of var int: t, array[int,int] of var int: p, var set of int: s, int: parent, int: goal) =
-  array1d([if n in s 
+function array[int] of var int: getChildDists(array[int, int] of var int: dist, array[int,int] of var int: t, array[int,int] of var int: p, array[int] of var int: s, int: parent, int: goal) =
+  array1d([if s[n] == 1 
               then dist[n, goal] % If a node n is a terminal for a subgoal option, then n is your child node.
             elseif t[parent, n] == 1
               then dist[n, goal] % If a node n can be reached by your primitive actions
@@ -102,8 +102,9 @@ constraint
 */
 int: L; % number of subgoal options
 
-var set of 1..N: SO; % Terminal states for subgoal option.
-constraint card(SO) <= L; % Constraint: the number of subgoal options is at most L.
+array[Nodes] of var 0..1: SO;
+% var set of 1..N: SO; % Terminal states for subgoal option.
+constraint sum(SO) <= L; % Constraint: the number of subgoal options is at most L.
 
 /*
   MDP model
