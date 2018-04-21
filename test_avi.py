@@ -28,14 +28,23 @@ def main(open_plot=True):
 
     # Make VIs.
     test_vi = AbstractValueIteration(ground_mdp=mdp, bootstrap=False)
-    iters, val, diff_hist = test_vi.run_vi_hist()
+    iters, val, errors = test_vi.run_vi_hist()
     print("V = ", test_vi.value_func)
     print("#iters = ", iters)
     state_space = test_vi.get_states()
     print("#states = ", len(state_space))
+    print("#actions= ", len(test_vi.actions))
+
+    print("normal VI")
+    test_vi2 = ValueIteration(mdp, bootstrap=False)
+    iters, val, errors = test_vi2.run_vi_hist()
+    print("V = ", test_vi2.value_func)
+    print("#iters = ", iters)
+    state_space = test_vi2.get_states()
+    print("#states = ", len(state_space))
+    print("#actions= ", len(test_vi2.actions))
 
     # options = test_vi.get_actions()
     # print("#options = ", len(actions))
-
 if __name__ == "__main__":
     main(open_plot=not sys.argv[-1] == "no_plot")
