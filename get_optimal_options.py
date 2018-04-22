@@ -117,7 +117,7 @@ def find_point_options(mdps, goals, nPO):
     # TODO: find a good solver
     call(["mzn-g12lazy", "options.mzn", "grid.dzn", "-o", "grid.ozn"]) # Google OR-tools
     # call(["minizinc", "-f", "~/library/or-tools/bin/fz", "options.mzn", "grid.dzn", "-o", "grid.ozn"]) # Google OR-tools
-    #call(["mzn-g12fd", "options.mzn", "grid.dzn", "-o", "grid.ozn"])
+    # call(["mzn-g12fd", "options.mzn", "grid.dzn", "-o", "grid.ozn"])
     print("done")
 
     options = []
