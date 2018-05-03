@@ -114,6 +114,12 @@ def find_point_options(mdps, goals, nPO):
     # print(dzn)
         
     print("Running minizinc...")
+
+    # ozn = pymzn.minizinc('options.mzn', 'grid.dzn', keep=True, timeout=120, output_mode='dict', output_vars=['PO_from', 'PO_to'])
+    # print(ozn)
+    # print(ozn[0]['PO_from'])
+    # print(ozn[0]['PO_to'])
+    
     # TODO: find a good solver
     call(["mzn-g12lazy", "options.mzn", "grid.dzn", "-o", "grid.ozn"]) # Google OR-tools
     # call(["minizinc", "-f", "~/library/or-tools/bin/fz", "options.mzn", "grid.dzn", "-o", "grid.ozn"]) # Google OR-tools
@@ -260,28 +266,24 @@ def find_eigenoptions(mdp, num_options=1):
 
 def main():
     np.set_printoptions(precision=2, suppress=True)
-    mdp1 = GridWorldMDP(width=2, height=6, init_loc=(1, 1), goal_locs=[(1, 6)], slip_prob=0.0)
-    mdp2 = GridWorldMDP(width=2, height=6, init_loc=(1, 1), goal_locs=[(1, 5)], slip_prob=0.0)
-    eigens = find_eigenoptions(mdp1)
-    for i, o in enumerate(eigens):
-        print("Option ", i)
-        print("init=", o[0])
-        print("goal=", o[1])
+    mdp1 = GridWorldMDP(width=1, height=4, init_loc=(1, 1), goal_locs=[(1, 4)], slip_prob=0.0)
+    # mdp2 = GridWorldMDP(width=1, height=4, init_loc=(1, 1), goal_locs=[(1, 5)], slip_prob=0.0)
+    # eigens = find_eigenoptions(mdp1)
+    # for i, o in enumerate(eigens):
+    #     print("Option ", i)
+    #     print("init=", o[0])
+    #     print("goal=", o[1])
+    # 
+    # betw_options = find_betweenness_options(mdp1, 0.1)
+    # for i, o in enumerate(betw_options):
+    #     print("Option ", i)
+    #     print("init=", o[0])
+    #     print("goal=", o[1])
 
-    betw_options = find_betweenness_options(mdp1, 0.1)
-    for i, o in enumerate(betw_options):
-        print("Option ", i)
-        print("init=", o[0])
-        print("goal=", o[1])
-    # print("term-id=", term_id)
-    #for i, o in enumerate(betw_options):
-    #    print("Option ", i)
-    #    print("init=", init_sets[o])
-    #    print("goal=", o)
     nPO = 1
     term1 = get_term_id(mdp1)
-    term2 = get_term_id(mdp2)
-    opt_options = find_point_options([mdp1, mdp2], [term1, term2], nPO)
+    # term2 = get_term_id(mdp2)
+    opt_options = find_point_options([mdp1], [term1], nPO)
     for i, o in enumerate(opt_options):
         print("Option ", i)
         print("init=", o[0])
