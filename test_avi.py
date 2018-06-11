@@ -14,16 +14,10 @@ from simple_rl.planning.ValueIterationClass import ValueIteration
     
     # Abstraction
 from simple_rl.abstraction import AbstractionWrapper, aa_helpers, ActionAbstraction, AbstractValueIteration
-from simple_rl.abstraction.action_abs.PredicateClass import Predicate
-from simple_rl.abstraction.action_abs.InListPredicateClass import InListPredicate
-from simple_rl.abstraction.action_abs.OptionClass import Option
-from simple_rl.abstraction.action_abs.PolicyFromDictClass import PolicyFromDict
-from get_optimal_options import find_point_options, find_betweenness_options
-
+from simple_rl.abstraction import Predicate, InListPredicate, Option, PolicyFromDict
 import matplotlib.pyplot as plt
 
-
-def main(open_plot=True):
+def main():
     mdp = GridWorldMDP(width=2, height=5, init_loc=(1, 1), goal_locs=[(2, 4)])
 
     # Make VIs.
@@ -44,7 +38,5 @@ def main(open_plot=True):
     print("#states = ", len(state_space))
     print("#actions= ", len(test_vi2.actions))
 
-    # options = test_vi.get_actions()
-    # print("#options = ", len(actions))
 if __name__ == "__main__":
-    main(open_plot=not sys.argv[-1] == "no_plot")
+    main()
