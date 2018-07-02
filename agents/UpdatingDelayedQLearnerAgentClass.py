@@ -11,7 +11,7 @@ from collections import defaultdict
 from simple_rl.agents.AgentClass import Agent
 
 
-class UpdatingDelayedQLearnerAgent(Agent):
+class UpdatingDelayedQLearningAgent(Agent):
     '''
     Delayed-Q Learning Agent (Strehl, A.L., Li, L., Wiewiora, E., Langford, J. and Littman, M.L., 2006. PAC model-free reinforcement learning).
     Implemented by Yuu Jinnai (ddyuudd@gmail.com)

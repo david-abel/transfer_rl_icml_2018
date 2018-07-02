@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 single_action_prior_exp.py
 
@@ -16,7 +15,7 @@ import argparse
 # Other imports.
 from utils import make_mdp_distr
 from simple_rl.mdp import MDP, MDPDistribution
-from simple_rl.run_experiments import run_agents_multi_task, run_agents_on_mdp
+from simple_rl.run_experiments import run_agents_lifelong, run_agents_on_mdp
 from simple_rl.agents import RandomAgent, RMaxAgent, QLearningAgent, FixedPolicyAgent
 from simple_rl.planning.ValueIterationClass import ValueIteration
 
@@ -239,7 +238,7 @@ def parse_args():
 
 
 def main():
-    import OptimalBeliefAgentClass
+    from agents import OptimalBeliefAgentClass
 
     # Setup multitask setting.
     # R ~ D : Puddle, Rock Sample
@@ -265,6 +264,9 @@ def main():
     print "Making agents...",
     sys.stdout.flush()
     mdp_distr_copy = copy.deepcopy(mdp_distr)
+
+    # Add additional agent:
+
     opt_stoch_policy = compute_optimal_stoch_policy(mdp_distr_copy)
     opt_stoch_policy_agent = FixedPolicyAgent(opt_stoch_policy, name="$\pi_{prior}$")
     opt_belief_agent = OptimalBeliefAgentClass.OptimalBeliefAgent(mdp_distr, actions)
@@ -276,7 +278,7 @@ def main():
     agents = [vi_agent, opt_stoch_policy_agent, rand_agent, opt_belief_agent]
 
     # Run task.
-    run_agents_multi_task(agents, mdp_distr, task_samples=samples, episodes=1, steps=100, reset_at_terminal=False, track_disc_reward=False, cumulative_plot=True)
+    run_agents_lifelong(agents, mdp_distr, samples=samples, episodes=1, steps=100, reset_at_terminal=False, track_disc_reward=False, cumulative_plot=True)
 
 if __name__ == "__main__":
     main()

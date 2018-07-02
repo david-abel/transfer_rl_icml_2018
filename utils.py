@@ -3,7 +3,6 @@ import itertools
 import random
 
 # Other imports
-from ThinWallGridMDPClass import ThinWallGridMDP
 from RockSampleMDPClass import RockSampleMDP
 from simple_rl.tasks import ChainMDP, GridWorldMDP, TaxiOOMDP, RandomMDP, FourRoomMDP, ComboLockMDP
 from simple_rl.tasks.grid_world.GridWorldMDPClass import make_grid_world_from_file
@@ -68,7 +67,6 @@ def make_mdp_distr(mdp_class, is_goal_terminal, mdp_size=11, horizon=0, gamma=0.
                     "four_room":FourRoomMDP(width=width, height=height, goal_locs=[changing_entities["four_room"][i % len(changing_entities["four_room"])]], is_goal_terminal=is_goal_terminal),
                     "octo":make_grid_world_from_file("octogrid.txt", num_goals=12, randomize=False, goal_num=i),
                     "corridor":GridWorldMDP(width=20, height=1, init_loc=(10, 1), goal_locs=[changing_entities["corridor"][i % len(changing_entities["corridor"])]], is_goal_terminal=is_goal_terminal, name="corridor"),
-                    "walls":ThinWallGridMDP(width=width, height=height, walls=changing_entities["walls"][i%len(changing_entities["walls"])]),
                     "combo_lock":ComboLockMDP(combo=changing_entities["combo_lock"][i%len(changing_entities["combo_lock"])]),
                     "spread":GridWorldMDP(width=width, height=height, rand_init=False, goal_locs=[changing_entities["spread"][i % len(changing_entities["spread"])]], is_goal_terminal=is_goal_terminal, name="spread_grid"),
                     "tight":GridWorldMDP(width=10, height=10, rand_init=False, goal_locs=[changing_entities["tight"][i % len(changing_entities["tight"])]], is_goal_terminal=is_goal_terminal, name="tight_grid"),

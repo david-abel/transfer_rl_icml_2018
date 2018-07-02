@@ -13,8 +13,8 @@ from simple_rl.mdp import MDP, MDPDistribution
 from simple_rl.run_experiments import run_agents_lifelong, run_agents_on_mdp
 from simple_rl.agents import RandomAgent, RMaxAgent, QLearningAgent, FixedPolicyAgent, DelayedQAgent
 from simple_rl.planning.ValueIterationClass import ValueIteration
-from UpdatingRMaxAgentClass import UpdatingRMaxAgent
-
+from agents.UpdatingRMaxAgentClass import UpdatingRMaxAgent
+from agents.UpdatingDelayedQLearningAgentClass import UpdatingDelayedQLearningAgent
 
 def parse_args():
     '''

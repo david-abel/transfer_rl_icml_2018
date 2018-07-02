@@ -2,7 +2,6 @@
 import copy
 
 # Other imports.
-from ThinWallGridMDPClass import ThinWallGridMDP
 from simple_rl.planning import ValueIteration
 from simple_rl.agents import Agent
 from single_action_prior_exp import compute_avg_mdp
@@ -60,11 +59,7 @@ class OptimalBeliefAgent(Agent):
             mdp_reward = mdp.get_reward_func()(self.prev_state, self.prev_action)
             mdp_next_state = mdp.get_transition_func()(self.prev_state, self.prev_action)
 
-            if isinstance(mdp, ThinWallGridMDP) and not (mdp_next_state == state):
-                falsified_mdps.append(mdp)
-                continue
-
-            if reward != mdp_reward: # and self.mdp_distr.get_num_mdps() - len(falsified_mdps) > 1:
+            if reward != mdp_reward:
                 falsified_mdps.append(mdp)
 
         return falsified_mdps

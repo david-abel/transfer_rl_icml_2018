@@ -13,7 +13,7 @@ def spawn_subproc(task, goal_terminal, samples, agent_type):
 	Summary:
 		Spawns a child subprocess to run the experiment.
 	'''
-        cmd = ['./q-learning_exp.py', \
+        cmd = ['./learning_exp.py', \
 	       '-mdp_class=' + str(task), \
 	       '-goal_terminal=' + str(goal_terminal), \
 	       '-samples=' + str(samples), \
@@ -22,12 +22,13 @@ def spawn_subproc(task, goal_terminal, samples, agent_type):
 	subprocess.Popen(cmd)
 
 def main():
-        tasks = ["chain", "four_room"]
-        agent_types = ["q"]
+    tasks = ["chain", "four_room"]
+    agent_types = ["q"]
+    
 	# QL
-        for task in tasks:
-                for agent in agent_types:
-	                spawn_subproc(task=task, goal_terminal=False, samples=10, agent_type=agent)
+    for task in tasks:
+        for agent in agent_types:
+            spawn_subproc(task=task, goal_terminal=False, samples=10, agent_type=agent)
 
 if __name__ == "__main__":
 	main()
