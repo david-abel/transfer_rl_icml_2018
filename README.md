@@ -1,12 +1,12 @@
 # Policy and Value Transfer for Lifelong RL
-Code for experimenting with transfer approaches to lifelong RL, attached to our 2018 ICML paper "Policy and Value Transfer for Lifelong Reinforcement Learning" (pdf coming soon).
+Code for experimenting with transfer approaches to lifelong RL, attached to our 2018 ICML paper [Policy and Value Transfer for Lifelong Reinforcement Learning](https://david-abel.github.io/papers/pol_val_transf_icml_18.pdf)
 
 Experiments require [simple_rl](https://github.com/david-abel/simple_rl), which can be installed with the usual:
 
 	pip install simple_rl
 
-To reproduce all of our plots, use _run_all_learning_experiments.py_ (Figure 3), or _run_all_policy_experiments.py_ (Figure 2).
+To reproduce all of our plots, run _run_all_policy_experiments.py_ (Figure 2), _run_all_learning_experiments.py_ (Figure 3), and _task_samples_experiment.py_ (Figure 4).
 
-Authors: David Abel, Yuu Jinnai, George Konidaris, Yue Guo, Michael L. Littman.
+Authors: David Abel, Yuu Jinnai, Yue Guo, George Konidaris, Michael L. Littman.
 
 Contact Dave or Yuu with any questions.
