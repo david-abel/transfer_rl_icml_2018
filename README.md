@@ -5,7 +5,7 @@ Experiments require [simple_rl](https://github.com/david-abel/simple_rl), which 
 
 	pip install simple_rl
 
-To reproduce all of our plots, run _run_all_policy_experiments.py_ (Figure 2), _run_all_learning_experiments.py_ (Figure 3 -- you must choose your learning algorithm in the file to generate Figures (a,d), (b,e), or (c,f)).
+To reproduce all of our plots, run _run_all_policy_experiments.py_ (Figure 2), _run_all_learning_experiments.py_ (Figure 3 -- you must choose your learning algorithm in the file to generate Figures 3 (a,d), (b,e), or (c,f)).
 
 Authors: David Abel, Yuu Jinnai, Yue Guo, George Konidaris, Michael L. Littman.
 
