@@ -11,10 +11,15 @@ import argparse
 from simple_rl.utils import make_mdp
 from simple_rl.mdp import MDP, MDPDistribution
 from simple_rl.run_experiments import run_agents_lifelong, run_agents_on_mdp
-from simple_rl.agents import RandomAgent, RMaxAgent, QLearningAgent, FixedPolicyAgent, DelayedQAgent
+from simple_rl.agents import RandomAgent, FixedPolicyAgent, DelayedQAgent
 from simple_rl.planning.ValueIterationClass import ValueIteration
 from agents.UpdatingRMaxAgentClass import UpdatingRMaxAgent
-from agents.UpdatingDelayedQLearningAgentClass import UpdatingDelayedQLearningAgent
+from agents.UpdatingDelayedQLearnerAgentClass import UpdatingDelayedQLearningAgent
+
+# Rmax and Q-learning agents are slightly modified from simple_rl counterparts to implement Transfer in Lifelong RL.
+from agents.RMaxAgentClass import RMaxAgent
+from agents.QLearningAgentClass import QLearningAgent
+
 
 def parse_args():
     '''
@@ -25,7 +30,7 @@ def parse_args():
     parser.add_argument("-mdp_class", type = str, default = "chain", nargs = '?', help = "Choose the mdp type (one of {octo, hall, grid, taxi, four_room}).")
     parser.add_argument("-goal_terminal", type = bool, default = False, nargs = '?', help = "Whether the goal is terminal.")
     parser.add_argument("-samples", type = int, default = 100, nargs = '?', help = "Number of samples for the experiment.")
-    parser.add_argument("-agent_type", type = str, default = False, nargs = '?', help = "Type of agents: (q, rmax, delayed-q).")
+    parser.add_argument("-agent_type", type = str, default = "q", nargs = '?', help = "Type of agents: (q, rmax, delayed-q).")
     args = parser.parse_args()
 
     return args.mdp_class, args.goal_terminal, args.samples, args.agent_type
@@ -122,6 +127,16 @@ def print_policy(state_space, policy, sample_rate=5):
         print
 
 
+def get_q_func(vi):
+    state_space = vi.get_states()
+    q_func = defaultdict(lambda: defaultdict(lambda: 0)) # Assuming R>=0
+    for s in state_space:
+        for a in vi.actions:
+            q_s_a = vi.get_q_value(s, a)
+            q_func[s][a] = q_s_a
+    return q_func
+
+
 def compute_optimistic_q_function(mdp_distr, sample_rate=5):
     '''
     Instead of transferring an average Q-value, we transfer the highest Q-value in MDPs so that
@@ -134,7 +149,7 @@ def compute_optimistic_q_function(mdp_distr, sample_rate=5):
         # Get a vi instance to compute state space.
         vi = ValueIteration(mdp, delta=0.0001, max_iterations=1000, sample_rate=sample_rate)
         iters, value = vi.run_vi()
-        q_func = vi.get_q_func()
+        q_func = get_q_func(vi)
         # print "value =", value
         for s in q_func:
             for a in q_func[s]:
@@ -142,7 +157,7 @@ def compute_optimistic_q_function(mdp_distr, sample_rate=5):
     return opt_q_func
 
 
-def main(eps=0.1, open_plot=True):
+def main(open_plot=True):
 
     mdp_class, is_goal_terminal, samples, alg = parse_args()
     
@@ -159,45 +174,50 @@ def main(eps=0.1, open_plot=True):
 
     ### Yuu
 
-    transfer_fixed_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="transferFixed")
-    rand_agent = RandomAgent(actions, name="$\\pi^u$")
+    # transfer_fixed_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="transferFixed")
+    # rand_agent = RandomAgent(actions, name="$\\pi^u$")
 
     opt_q_func = compute_optimistic_q_function(mdp_distr)
-    avg_q_func = avg_mdp_vi.get_q_function()
+    avg_q_func = get_q_func(avg_mdp_vi)
+    vmax = 1.0 / (1.0 - 0.99) # Vmax = Rmax / (1 - gamma)
 
     if alg == "q":
-        pure_ql_agent = QLearningAgent(actions, epsilon=eps, name="Q-0")
-        qmax = 1.0 * (1 - 0.99)
-        # qmax = 1.0
-        pure_ql_agent_opt = QLearningAgent(actions, epsilon=eps, default_q=qmax, name="Q-vmax")
-        transfer_ql_agent_optq = QLearningAgent(actions, epsilon=eps, name="Q-trans-max")
+        eps = 0.1
+        lrate = 0.1
+        pure_ql_agent = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-0")
+        pure_ql_agent_opt = QLearningAgent(actions, alpha=lrate, epsilon=eps, default_q=vmax, name="Q-Vmax")
+        transfer_ql_agent_optq = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-MaxQInit")
         transfer_ql_agent_optq.set_init_q_function(opt_q_func)
-        transfer_ql_agent_avgq = QLearningAgent(actions, epsilon=eps, name="Q-trans-avg")
+        transfer_ql_agent_avgq = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-AverageQInit")
         transfer_ql_agent_avgq.set_init_q_function(avg_q_func)
 
         agents = [pure_ql_agent, pure_ql_agent_opt,
                   transfer_ql_agent_optq, transfer_ql_agent_avgq]
     elif alg == "rmax":
-        pure_rmax_agent = RMaxAgent(actions, name="RMAX-vmax")
-        updating_trans_rmax_agent = UpdatingRMaxAgent(actions, name="RMAX-updating_max")
-        trans_rmax_agent = RMaxAgent(actions, name="RMAX-trans_max")
+        known_threshold = 10
+        min_experience = 5
+        pure_rmax_agent = RMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-Vmax")
+        updating_trans_rmax_agent = UpdatingRMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-MaxQInit")
+        trans_rmax_agent = RMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-UO")
         trans_rmax_agent.set_init_q_function(opt_q_func)
         agents = [pure_rmax_agent, updating_trans_rmax_agent, trans_rmax_agent]
     elif alg == "delayed-q":
-        pure_delayed_ql_agent = DelayedQLearningAgent(actions, opt_q_func, name="DelayedQ-vmax")
+        torelance = 0.1
+        min_experience = 5
+        pure_delayed_ql_agent = DelayedQAgent(actions, opt_q_func, m=min_experience, epsilon1=torelance, name="DelayedQ-Vmax")
         pure_delayed_ql_agent.set_vmax()
-        updating_delayed_ql_agent = UpdatingDelayedQLearningAgent(actions, name="DelayedQ-updating_max")
-        trans_delayed_ql_agent = DelayedQLearningAgent(actions, opt_q_func, name="DelayedQ-trans-max")
+        updating_delayed_ql_agent = UpdatingDelayedQLearningAgent(actions, m=min_experience, epsilon1=torelance, name="DelayedQ-MaxQInit")
+        trans_delayed_ql_agent = DelayedQAgent(actions, opt_q_func, m=min_experience, epsilon1=torelance, name="DelayedQ-UO")
         agents = [pure_delayed_ql_agent, updating_delayed_ql_agent, trans_delayed_ql_agent]
     else:
-        print "Unknown type of agents:", alg
-        print "(q, rmax, delayed-q)"
-        assert(False)
+        msg = "Unknown type of agent:" + alg + ". Use -agent_type (q, rmax, delayed-q)"
+        assert False, msg
+
         
     # Run task.
-    run_agents_lifelong(agents, mdp_distr, task_samples=samples, episodes=1, steps=100, reset_at_terminal=is_goal_terminal, is_rec_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
+    run_agents_lifelong(agents, mdp_distr, samples=samples, episodes=100, steps=100, reset_at_terminal=is_goal_terminal, cumulative_plot=True, open_plot=open_plot)
+    # run_agents_lifelong(agents, mdp_distr, samples=samples, episodes=1, steps=100, reset_at_terminal=is_goal_terminal, track_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
 
 if __name__ == "__main__":
-    eps = 0.1
-    open_plot = False
-    main(eps=eps, open_plot=open_plot)
+    open_plot = True
+    main(open_plot=open_plot)

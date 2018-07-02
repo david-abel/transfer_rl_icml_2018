@@ -22,8 +22,8 @@ def spawn_subproc(task, goal_terminal, samples, agent_type):
 	subprocess.Popen(cmd)
 
 def main():
-    tasks = ["chain", "four_room"]
-    agent_types = ["q"]
+    tasks = ["spread", "tight"]
+    agent_types = ["q"] # Types of agents: q, rmax, delayed-q
     
 	# QL
     for task in tasks:
