@@ -9,6 +9,8 @@ from collections import defaultdict
 
 # Other imports.
 from simple_rl.agents.AgentClass import Agent
+from QLearningAgentClass import QLearningAgent
+from simple_rl.planning.ValueIterationClass import ValueIteration
 
 
 class UpdatingDelayedQLearningAgent(Agent):
@@ -17,7 +19,7 @@ class UpdatingDelayedQLearningAgent(Agent):
     Implemented by Yuu Jinnai (ddyuudd@gmail.com)
     '''
 
-    def __init__(self, actions, name="Updating-delayed-Q-learning", gamma=0.99, m=1, epsilon1=0.1):
+    def __init__(self, actions, default_q=1.0/(1.0-0.99), name="Updating-delayed-Q-learning", gamma=0.99, m=1, epsilon1=0.1, qstar_transfer=False, num_sample_tasks=20, sample_with_q=False):
         '''
         Args:
             actions (list): Contains strings denoting the actions.
@@ -35,8 +37,8 @@ class UpdatingDelayedQLearningAgent(Agent):
         self.step_number = 0
 
         # TODO: Here we assume that init_q has Qvalue for every (s, a) pair.
-        self.q_func = defaultdict(lambda: defaultdict(lambda: 1.0 / (1.0 - gamma)))
-        self.init_q_func = defaultdict(lambda: defaultdict(lambda: 1.0 / (1.0 - gamma)))
+        self.q_func = defaultdict(lambda: defaultdict(lambda: default_q))
+        self.init_q_func = defaultdict(lambda: defaultdict(lambda: default_q))
 
         self.AU = defaultdict(lambda: defaultdict(lambda: 0.0))  # used for attempted updates
         self.l = defaultdict(lambda: defaultdict(lambda: 0))  # counters
@@ -55,6 +57,14 @@ class UpdatingDelayedQLearningAgent(Agent):
         self.epsilon1 = epsilon1
         
         self.tstar = 0  # time of most recent action value change
+        self.task_number = 0
+        self.default_q = default_q
+        self.num_sample_tasks = num_sample_tasks
+        self.qstar_transfer = qstar_transfer
+        self.sample_with_q = sample_with_q
+
+        if self.sample_with_q:
+            self.q_agent = QLearningAgent(actions, gamma=self.gamma, default_q=self.default_q)
 
     # --------------------------------
     # ---- CENTRAL ACTION METHODS ----
@@ -72,6 +82,9 @@ class UpdatingDelayedQLearningAgent(Agent):
             and performs updates given (s=self.prev_state,
             a=self.prev_action, r=reward, s'=state)
         '''
+        if self.sample_with_q and self.task_number < self.num_sample_tasks:
+            return self.q_agent.act(state, reward, learning)
+        
         if learning:
             self.update(self.prev_state, self.prev_action, reward, state)
 
@@ -109,10 +122,16 @@ class UpdatingDelayedQLearningAgent(Agent):
 
         Summary:
             Updates the internal Q Function according to the Bellman Equation. (Classic Q Learning update)
-        '''
+        '''        
         # If this is the first state, just return.
         if state is None:
             self.prev_state = next_state
+            return
+
+        if state.is_terminal():
+            # If the state is terminal we set the Q values to 0
+            for a in self.actions:
+                self.q_func[state][a] = 0
             return
 
         if self.b[state][action] <= self.tstar:
@@ -208,7 +227,7 @@ class UpdatingDelayedQLearningAgent(Agent):
 
         return softmax
 
-    def reset(self):
+    def reset(self, mdp=None):
         self.step_number = 0
         self.episode_number = 0
         # print "#####################################"
@@ -218,8 +237,18 @@ class UpdatingDelayedQLearningAgent(Agent):
         #     print (x)
         #     for y in self.q_func[x]:
         #         print (y, ':', self.q_func[x][y])
-        self.update_init_q_function()
-        self.q_func = copy.deepcopy(self.init_q_func)
+        if mdp is not None:
+            self.update_init_q_function(mdp)
+        if self.task_number >= self.num_sample_tasks:
+            for x in self.init_q_func:
+                for y in self.init_q_func[x]:
+                    assert(self.init_q_func[x][y] >= -0.001)
+            self.q_func = copy.deepcopy(self.init_q_func)
+        else:
+            self.q_func = defaultdict(lambda: defaultdict(lambda: self.default_q))
+        self.task_number = self.task_number + 1
+        if self.sample_with_q:
+            self.q_agent.reset()
         Agent.reset(self)
 
     def end_of_episode(self):
@@ -237,30 +266,76 @@ class UpdatingDelayedQLearningAgent(Agent):
         self.init_q_func = copy.deepcopy(q_func)
         self.q_func = copy.deepcopy(self.init_q_func)
 
-    def set_vmax(self):
+    def set_vmax(self, vmax):
         '''
         Initialize Q-values to be Vmax.
         '''
-        vmax = self.rmax / (1 - self.gamma)
         for x in self.q_func:
             for y in self.q_func[x]:
                 self.q_func[x][y] = vmax
                 self.init_q_func[x][y] = vmax
 
-    def update_init_q_function(self):
-        new_q_func = self.q_func
-        # print new_q_func, type(new_q_func)
-        assert len(self.init_q_func) <= len(new_q_func)
-        
-        for x in new_q_func:
-            # print "x", x, len(self.init_q_func[x])
-            assert len(self.init_q_func[x]) <= len(new_q_func[x])
-            for y in new_q_func[x]:
-                # print "y", y
-                # print "new_q_func[x]", new_q_func[x], type(new_q_func[x])
-                # print "init_q_func[x]", self.init_q_func[x], type(self.init_q_func[x])
-                # print type(self.init_q_func[x][y])
-                # print type(new_q_func[x][y])
-                # print self.init_q_func[x][y], new_q_func[x][y]
-                new_q_func[x][y] = max(new_q_func[x][y], self.init_q_func[x][y])
-        self.init_q_func = new_q_func
+    def update_init_q_function(self, mdp):
+        '''
+        If sample_with_q is True, run Q-learning for sample tasks.
+        If qstar_transfer is True, run value iteration for sample tasks to get Q*.
+        Else, run delayed Q-learning for sample tasks
+        '''
+        if self.sample_with_q:
+            if self.task_number == 0:
+                self.init_q_func = copy.deepcopy(self.q_agent.q_func)
+            elif self.task_number < self.num_sample_tasks:
+                new_q_func = self.q_agent.q_func
+                for x in new_q_func:
+                    for y in new_q_func[x]:
+                        self.init_q_func[x][y] = max(new_q_func[x][y], self.init_q_func[x][y])
+        elif self.qstar_transfer:
+            if self.task_number == 0:
+                self.init_q_func = defaultdict(lambda: defaultdict(lambda: float("-inf")))
+            # else:
+            elif self.task_number < self.num_sample_tasks:
+                vi = ValueIteration(mdp, delta=0.0001, max_iterations=2000, sample_rate=5)
+                _, _ = vi.run_vi()
+                new_q_func = vi.get_q_function()
+                for x in new_q_func:
+                    for y in new_q_func[x]:
+                        self.init_q_func[x][y] = max(new_q_func[x][y], self.init_q_func[x][y])
+        else:
+            if self.task_number == 0:
+                self.init_q_func = defaultdict(lambda: defaultdict(lambda: float("-inf")))
+            elif self.task_number < self.num_sample_tasks:
+                new_q_func = self.q_func
+                for x in new_q_func:
+                    assert len(self.init_q_func[x]) <= len(new_q_func[x])
+                    for y in new_q_func[x]:
+                        self.init_q_func[x][y] = max(new_q_func[x][y], self.init_q_func[x][y])
+                        assert(self.init_q_func[x][y] <= self.default_q)
+
+                ### Uncomment the code below to check if Q-value is converging to the optimal enough
+                # Compare q_func learned vs. the true Q value.
+                # vi = ValueIteration(mdp, delta=0.001, max_iterations=2000, sample_rate=5)
+                # _, _ = vi.run_vi()
+                # qstar_func = vi.get_q_function()  # VI to enumerate all states
+                # print "Q-function learned by delayed-Q"
+                # self.print_dict(new_q_func)
+                # print "Optimal Q-function"
+                # self.print_dict(qstar_func)
+                
+        if self.task_number == self.num_sample_tasks:
+            vi = ValueIteration(mdp, delta=0.1, max_iterations=2, sample_rate=1)
+            _, _ = vi.run_vi()
+            new_q_func = vi.get_q_function()  # VI to enumerate all states
+            for s in new_q_func:
+                for a in new_q_func[s]:
+                    if self.init_q_func[s][a] < 0:  # If (s, a) is never visited set Vmax
+                        self.init_q_func[s][a] = self.default_q
+            print self.name, "Initial Q func from", self.task_number, "tasks"
+            self.print_dict(self.init_q_func)
+
+    def print_dict(self, dic):
+        for x in dic:
+            for y in dic[x]:
+                print "%.2f" % dic[x][y],
+            print ""
+
+

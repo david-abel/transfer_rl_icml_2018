@@ -15,6 +15,7 @@ from simple_rl.agents import RandomAgent, FixedPolicyAgent, DelayedQAgent
 from simple_rl.planning.ValueIterationClass import ValueIteration
 from agents.UpdatingRMaxAgentClass import UpdatingRMaxAgent
 from agents.UpdatingDelayedQLearnerAgentClass import UpdatingDelayedQLearningAgent
+from agents.UpdatingQLearnerAgentClass import UpdatingQLearnerAgent
 
 # Rmax and Q-learning agents are slightly modified from simple_rl counterparts to implement Transfer in Lifelong RL.
 from agents.RMaxAgentClass import RMaxAgent
@@ -155,9 +156,11 @@ def compute_optimistic_q_function(mdp_distr, sample_rate=5):
             for a in q_func[s]:
                 opt_q_func[s][a] = max(opt_q_func[s][a], q_func[s][a])
     return opt_q_func
-
+    
 
 def main(open_plot=True):
+    episodes = 1
+    steps = 10
 
     mdp_class, is_goal_terminal, samples, alg = parse_args()
     
@@ -165,6 +168,7 @@ def main(open_plot=True):
     mdp_distr = make_mdp.make_mdp_distr(mdp_class=mdp_class)
     actions = mdp_distr.get_actions()
 
+    gamma = 0.99
     # Compute average MDP.
     print "Making and solving avg MDP...",
     sys.stdout.flush()
@@ -175,32 +179,38 @@ def main(open_plot=True):
     ### Yuu
 
     # transfer_fixed_agent = FixedPolicyAgent(avg_mdp_vi.policy, name="transferFixed")
-    # rand_agent = RandomAgent(actions, name="$\\pi^u$")
+    rand_agent = RandomAgent(actions, name="$\\pi^u$")
 
     opt_q_func = compute_optimistic_q_function(mdp_distr)
     avg_q_func = get_q_func(avg_mdp_vi)
-    vmax = 1.0 / (1.0 - 0.99) # Vmax = Rmax / (1 - gamma)
+    vmax = 1.0 / (1.0 - gamma) # Vmax = Rmax / (1 - gamma)
 
     if alg == "q":
         eps = 0.1
         lrate = 0.1
         pure_ql_agent = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-0")
         pure_ql_agent_opt = QLearningAgent(actions, alpha=lrate, epsilon=eps, default_q=vmax, name="Q-Vmax")
-        transfer_ql_agent_optq = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-MaxQInit")
+        ql_agent_upd_maxq = UpdatingQLearnerAgent(actions, alpha=lrate, epsilon=eps, gamma=gamma, default_q=vmax, name="Q-MaxQInit$")
+
+        transfer_ql_agent_optq = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-UO")
         transfer_ql_agent_optq.set_init_q_function(opt_q_func)
+        
         transfer_ql_agent_avgq = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-AverageQInit")
         transfer_ql_agent_avgq.set_init_q_function(avg_q_func)
 
-        agents = [pure_ql_agent, pure_ql_agent_opt,
-                  transfer_ql_agent_optq, transfer_ql_agent_avgq]
+        agents = [transfer_ql_agent_optq, ql_agent_upd_maxq, transfer_ql_agent_avgq,
+                  pure_ql_agent_opt, pure_ql_agent]
     elif alg == "rmax":
+        """
+        Note that Rmax is a model-based algorithm and is very slow compared to other model-free algorithms like Q-learning and delayed Q-learning.
+        """
         known_threshold = 10
         min_experience = 5
         pure_rmax_agent = RMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-Vmax")
         updating_trans_rmax_agent = UpdatingRMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-MaxQInit")
         trans_rmax_agent = RMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-UO")
         trans_rmax_agent.set_init_q_function(opt_q_func)
-        agents = [pure_rmax_agent, updating_trans_rmax_agent, trans_rmax_agent]
+        agents = [trans_rmax_agent, updating_trans_rmax_agent, pure_rmax_agent, rand_agent]
     elif alg == "delayed-q":
         torelance = 0.1
         min_experience = 5
@@ -208,15 +218,37 @@ def main(open_plot=True):
         pure_delayed_ql_agent.set_vmax()
         updating_delayed_ql_agent = UpdatingDelayedQLearningAgent(actions, m=min_experience, epsilon1=torelance, name="DelayedQ-MaxQInit")
         trans_delayed_ql_agent = DelayedQAgent(actions, opt_q_func, m=min_experience, epsilon1=torelance, name="DelayedQ-UO")
-        agents = [pure_delayed_ql_agent, updating_delayed_ql_agent, trans_delayed_ql_agent]
+        agents = [pure_delayed_ql_agent, updating_delayed_ql_agent, trans_delayed_ql_agent, rand_agent]        
+    elif alg == "sample-effect":
+        """
+        This runs a comparison of MaxQInit with different number of MDP samples to calculate the initial Q function. Note that the performance of the sampled MDP is ignored for this experiment. It reproduces the result of Figure 4 of "Policy and Value Transfer for Lifelong Reinforcement Learning".
+        """
+        torelance = 0.1
+        min_experience = 5
+        pure_delayed_ql_agent = DelayedQAgent(actions, opt_q_func, m=min_experience, epsilon1=torelance, name="DelayedQ-Vmax")
+        pure_delayed_ql_agent.set_vmax()
+        dql_60samples = UpdatingDelayedQLearningAgent(actions, default_q=vmax, gamma=gamma, m=min_experience, epsilon1=torelance, num_sample_tasks=60, name="$DelayedQ-MaxQInit60$")
+        dql_40samples = UpdatingDelayedQLearningAgent(actions, default_q=vmax, gamma=gamma, m=min_experience, epsilon1=torelance, num_sample_tasks=40, name="$DelayedQ-MaxQInit40$")
+        dql_20samples = UpdatingDelayedQLearningAgent(actions, default_q=vmax, gamma=gamma, m=min_experience, epsilon1=torelance, num_sample_tasks=20, name="$DelayedQ-MaxQInit20$")
+
+        # Sample MDPs. Note that the performance of the sampled MDP is ignored and not included in the average in the final plot.
+        run_agents_lifelong([dql_20samples], mdp_distr, samples=int(samples*1/5.0), episodes=episodes, steps=steps, reset_at_terminal=is_goal_terminal, track_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
+        # mdp_distr.reset_tasks()
+        run_agents_lifelong([dql_40samples], mdp_distr, samples=int(samples*2/5.0), episodes=episodes, steps=steps, reset_at_terminal=is_goal_terminal, track_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
+        # mdp_distr.reset_tasks()
+        run_agents_lifelong([dql_60samples], mdp_distr, samples=int(samples*3/5.0), episodes=episodes, steps=steps, reset_at_terminal=is_goal_terminal, track_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
+        # mdp_distr.reset_tasks()
+        # agents = [pure_delayed_ql_agent]
+        agents = [dql_60samples, dql_40samples, dql_20samples, pure_delayed_ql_agent]
     else:
         msg = "Unknown type of agent:" + alg + ". Use -agent_type (q, rmax, delayed-q)"
         assert False, msg
 
         
     # Run task.
-    run_agents_lifelong(agents, mdp_distr, samples=samples, episodes=100, steps=100, reset_at_terminal=is_goal_terminal, cumulative_plot=True, open_plot=open_plot)
+    run_agents_lifelong(agents, mdp_distr, samples=samples, episodes=episodes, steps=steps, reset_at_terminal=is_goal_terminal, track_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
     # run_agents_lifelong(agents, mdp_distr, samples=samples, episodes=1, steps=100, reset_at_terminal=is_goal_terminal, track_disc_reward=False, cumulative_plot=True, open_plot=open_plot)
+
 
 if __name__ == "__main__":
     open_plot = True
