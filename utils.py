@@ -38,7 +38,7 @@ def make_mdp_distr(mdp_class, is_goal_terminal, mdp_size=11, horizon=0, gamma=0.
     grid_goal_locs = tl_grid_goal_locs + tr_grid_goal_locs
 
     # Four room.
-    four_room_goal_locs = [(width, height), (width, 1), (1, height), (1, height - 2), (width - 2, height - 2)]#, (width - 2, 1)]
+    four_room_goal_locs = [(width, height), (width, 1), (1, height), (1, height - 2), (width - 2, height - 2), (width - 2, 1)]
 
     # SPREAD vs. TIGHT
     spread_goal_locs = [(width, height), (width, 1), (1, height), (1, height - 2), (width - 2, height - 2), (width - 2, 1), (2,2)]
@@ -64,7 +64,7 @@ def make_mdp_distr(mdp_class, is_goal_terminal, mdp_size=11, horizon=0, gamma=0.
     for i in xrange(num_mdps):
 
         new_mdp = {"chain":ChainMDP(reset_val=changing_entities["chain"][i%len(changing_entities["chain"])]),
-                    "lava":GridWorldMDP(width=width, height=height, rand_init=False, lava_locs=changing_entities["lava"][i%len(changing_entities["lava"])], goal_locs=[(mdp_size-3, mdp_size-3)], is_goal_terminal=is_goal_terminal, name="lava_world", slip_prob=0.1),
+                    "lava":GridWorldMDP(width=width, height=height, rand_init=False, step_cost=-0.001, lava_cost=0.0, lava_locs=changing_entities["lava"][i%len(changing_entities["lava"])], goal_locs=[(mdp_size-3, mdp_size-3)], is_goal_terminal=is_goal_terminal, name="lava_world", slip_prob=0.1),
                     "four_room":FourRoomMDP(width=width, height=height, goal_locs=[changing_entities["four_room"][i % len(changing_entities["four_room"])]], is_goal_terminal=is_goal_terminal),
                     "octo":make_grid_world_from_file("octogrid.txt", num_goals=12, randomize=False, goal_num=i),
                     "corridor":GridWorldMDP(width=20, height=1, init_loc=(10, 1), goal_locs=[changing_entities["corridor"][i % len(changing_entities["corridor"])]], is_goal_terminal=is_goal_terminal, name="corridor"),
