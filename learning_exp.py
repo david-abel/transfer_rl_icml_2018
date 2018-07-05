@@ -159,8 +159,8 @@ def compute_optimistic_q_function(mdp_distr, sample_rate=5):
     
 
 def main(open_plot=True):
-    episodes = 1
-    steps = 10
+    episodes = 100
+    steps = 100
 
     mdp_class, is_goal_terminal, samples, alg = parse_args()
     
