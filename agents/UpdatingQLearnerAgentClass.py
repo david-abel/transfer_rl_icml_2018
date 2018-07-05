@@ -133,16 +133,16 @@ class UpdatingQLearnerAgent(Agent):
             # If the state is terminal we set the Q values to 0
             for a in self.actions:
                 self.q_func[state][a] = 0.0
-            print "State is terminal!!!!!!"
-            print self.q_func[state]
+            # print("State is terminal!")
+            # print(self.q_func[state])
             return
         
         if next_state.is_terminal():
             # If the state is terminal we set the Q values to 0
             for a in self.actions:
                 self.q_func[state][a] = 0.0
-            print "next_state is terminal!!!!!!"
-            print self.q_func[state]
+            # print("next_state is terminal!")
+            # print(self.q_func[state])
             return
 
         # Update the Q Function.
@@ -270,11 +270,11 @@ class UpdatingQLearnerAgent(Agent):
                 for a in new_q_func[s]:
                     if self.default_q_func[s][a] < 0:  # If (s, a) is never visited set Vmax
                         self.default_q_func[s][a] = self.default_q
-            print self.name, "Initial Q func from", self.task_number, "tasks"
+            print(self.name, "Initial Q func from", self.task_number, "tasks")
             self.print_dict(self.default_q_func)
 
     def print_dict(self, dic):
         for x in dic:
             for y in dic[x]:
-                print "%.2f" % dic[x][y],
-            print ""
+                print("%.2f" % dic[x][y], end='')
+            print("")

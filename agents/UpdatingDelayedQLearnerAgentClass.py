@@ -9,7 +9,7 @@ from collections import defaultdict
 
 # Other imports.
 from simple_rl.agents.AgentClass import Agent
-from QLearningAgentClass import QLearningAgent
+from .QLearningAgentClass import QLearningAgent
 from simple_rl.planning.ValueIterationClass import ValueIteration
 
 
@@ -329,13 +329,13 @@ class UpdatingDelayedQLearningAgent(Agent):
                 for a in new_q_func[s]:
                     if self.init_q_func[s][a] < 0:  # If (s, a) is never visited set Vmax
                         self.init_q_func[s][a] = self.default_q
-            print self.name, "Initial Q func from", self.task_number, "tasks"
+            print(self.name, "Initial Q func from", self.task_number, "tasks")
             self.print_dict(self.init_q_func)
 
     def print_dict(self, dic):
         for x in dic:
             for y in dic[x]:
-                print "%.2f" % dic[x][y],
-            print ""
+                print("%.2f" % dic[x][y], end='')
+            print("")
 
 

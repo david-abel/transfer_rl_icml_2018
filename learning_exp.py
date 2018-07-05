@@ -69,7 +69,7 @@ def compute_avg_mdp(mdp_distr, sample_rate=5):
 
                 avg_rew[s][a] += prob_of_mdp * r
             
-                for repeat in xrange(sample_rate):
+                for repeat in range(sample_rate):
                     s_prime = mdp.transition_func(s,a)
                     avg_trans_counts[s][a][s_prime] += prob_of_mdp
 
@@ -122,10 +122,10 @@ def make_policy_from_action_list(action_ls, actions, states):
 def print_policy(state_space, policy, sample_rate=5):
 
     for cur_state in state_space:
-        print cur_state, "\n\t",
+        print(cur_state, "\n\t", end='')
         for j in xrange(sample_rate):
-            print policy(cur_state),
-        print
+            print(policy(cur_state), end='')
+        print("")
 
 
 def get_q_func(vi):
@@ -170,7 +170,7 @@ def main(open_plot=True):
 
     gamma = 0.99
     # Compute average MDP.
-    print "Making and solving avg MDP...",
+    print("Making and solving avg MDP...", end='')
     sys.stdout.flush()
     avg_mdp = compute_avg_mdp(mdp_distr)
     avg_mdp_vi = ValueIteration(avg_mdp, delta=0.001, max_iterations=1000, sample_rate=5)
@@ -190,7 +190,7 @@ def main(open_plot=True):
         lrate = 0.1
         pure_ql_agent = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-0")
         pure_ql_agent_opt = QLearningAgent(actions, alpha=lrate, epsilon=eps, default_q=vmax, name="Q-Vmax")
-        ql_agent_upd_maxq = UpdatingQLearnerAgent(actions, alpha=lrate, epsilon=eps, gamma=gamma, default_q=vmax, name="Q-MaxQInit$")
+        ql_agent_upd_maxq = UpdatingQLearnerAgent(actions, alpha=lrate, epsilon=eps, gamma=gamma, default_q=vmax, name="Q-MaxQInit")
 
         transfer_ql_agent_optq = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-UO")
         transfer_ql_agent_optq.set_init_q_function(opt_q_func)
