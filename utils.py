@@ -1,9 +1,8 @@
-# Python imports.
+# Python imports.i
 import itertools
 import random
 
 # Other imports
-from RockSampleMDPClass import RockSampleMDP
 from simple_rl.tasks import ChainMDP, GridWorldMDP, TaxiOOMDP, RandomMDP, FourRoomMDP, ComboLockMDP
 from simple_rl.tasks.grid_world.GridWorldMDPClass import make_grid_world_from_file
 from simple_rl.mdp import MDPDistribution
@@ -26,13 +25,13 @@ def make_mdp_distr(mdp_class, is_goal_terminal, mdp_size=11, horizon=0, gamma=0.
     # Corridor.
     corr_width = 20
     corr_goal_magnitude = 1 #random.randint(1, 5)
-    corr_goal_cols = [i for i in xrange(1, corr_goal_magnitude + 1)] + [j for j in xrange(corr_width-corr_goal_magnitude + 1, corr_width + 1)]
+    corr_goal_cols = [i for i in range(1, corr_goal_magnitude + 1)] + [j for j in range(corr_width-corr_goal_magnitude + 1, corr_width + 1)]
     corr_goal_locs  = list(itertools.product(corr_goal_cols, [1]))
 
     # Grid World
-    tl_grid_world_rows, tl_grid_world_cols = [i for i in xrange(width - 4, width)], [j for j in xrange(height - 4, height)]
+    tl_grid_world_rows, tl_grid_world_cols = [i for i in range(width - 4, width)], [j for j in range(height - 4, height)]
     tl_grid_goal_locs = list(itertools.product(tl_grid_world_rows, tl_grid_world_cols))
-    tr_grid_world_rows, tr_grid_world_cols = [i for i in xrange(1, 4)], [j for j in xrange(height - 4, height)]
+    tr_grid_world_rows, tr_grid_world_cols = [i for i in range(1, 4)], [j for j in range(height - 4, height)]
     tr_grid_goal_locs = list(itertools.product(tr_grid_world_rows, tr_grid_world_cols))
     grid_goal_locs = tl_grid_goal_locs + tr_grid_goal_locs
 
@@ -60,12 +59,12 @@ def make_mdp_distr(mdp_class, is_goal_terminal, mdp_size=11, horizon=0, gamma=0.
         num_mdps = 12
     mdp_prob = 1.0 / num_mdps
 
-    for i in xrange(num_mdps):
+    for i in range(num_mdps):
 
         new_mdp = {"chain":ChainMDP(reset_val=changing_entities["chain"][i%len(changing_entities["chain"])]),
-                    "lava":GridWorldMDP(width=width, height=height, rand_init=False, step_cost=-0.001, lava_cost=0.0, lava_locs=changing_entities["lava"][i%len(changing_entities["lava"])], goal_locs=[(mdp_size-3, mdp_size-3)], is_goal_terminal=is_goal_terminal, name="lava_world", slip_prob=0.1),
+                   # "lava":GridWorldMDP(width=width, height=height, rand_init=False, step_cost=-0.001, lava_cost=0.0, lava_locs=changing_entities["lava"][i%len(changing_entities["lava"])], goal_locs=[(mdp_size-3, mdp_size-3)], is_goal_terminal=is_goal_terminal, name="lava_world", slip_prob=0.1),
                     "four_room":FourRoomMDP(width=width, height=height, goal_locs=[changing_entities["four_room"][i % len(changing_entities["four_room"])]], is_goal_terminal=is_goal_terminal),
-                    "octo":make_grid_world_from_file("octogrid.txt", num_goals=12, randomize=False, goal_num=i),
+                   # "octo":make_grid_world_from_file("octogrid.txt", num_goals=12, randomize=False, goal_num=i),
                     "corridor":GridWorldMDP(width=20, height=1, init_loc=(10, 1), goal_locs=[changing_entities["corridor"][i % len(changing_entities["corridor"])]], is_goal_terminal=is_goal_terminal, name="corridor"),
                     "combo_lock":ComboLockMDP(combo=changing_entities["combo_lock"][i%len(changing_entities["combo_lock"])]),
                     "spread":GridWorldMDP(width=width, height=height, rand_init=False, goal_locs=[changing_entities["spread"][i % len(changing_entities["spread"])]], is_goal_terminal=is_goal_terminal, name="spread_grid"),

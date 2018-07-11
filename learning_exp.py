@@ -8,7 +8,8 @@ import copy
 import argparse
 
 # Other imports.
-from simple_rl.utils import make_mdp
+from utils import make_mdp_distr
+# from simple_rl.utils import make_mdp
 from simple_rl.mdp import MDP, MDPDistribution
 from simple_rl.run_experiments import run_agents_lifelong, run_agents_on_mdp
 from simple_rl.agents import RandomAgent, FixedPolicyAgent, DelayedQAgent
@@ -165,7 +166,7 @@ def main(open_plot=True):
     mdp_class, is_goal_terminal, samples, alg = parse_args()
     
     # Setup multitask setting.
-    mdp_distr = make_mdp.make_mdp_distr(mdp_class=mdp_class)
+    mdp_distr = make_mdp_distr(mdp_class=mdp_class, is_goal_terminal=is_goal_terminal)
     actions = mdp_distr.get_actions()
 
     gamma = 0.99
