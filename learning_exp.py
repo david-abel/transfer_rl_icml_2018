@@ -147,12 +147,13 @@ def compute_optimistic_q_function(mdp_distr, sample_rate=5):
     opt_q_func = defaultdict(lambda: defaultdict(lambda: float("-inf")))
     for mdp in mdp_distr.get_mdps():
         # prob_of_mdp = mdp_distr.get_prob_of_mdp(mdp)
-
+        # print("new mdp")
         # Get a vi instance to compute state space.
         vi = ValueIteration(mdp, delta=0.0001, max_iterations=1000, sample_rate=sample_rate)
         iters, value = vi.run_vi()
         q_func = get_q_func(vi)
-        # print "value =", value
+        # print("value =", value)
+        # print("qfunc =", q_func)
         for s in q_func:
             for a in q_func[s]:
                 opt_q_func[s][a] = max(opt_q_func[s][a], q_func[s][a])
@@ -162,14 +163,14 @@ def compute_optimistic_q_function(mdp_distr, sample_rate=5):
 def main(open_plot=True):
     episodes = 100
     steps = 100
+    gamma = 0.95
 
     mdp_class, is_goal_terminal, samples, alg = parse_args()
     
     # Setup multitask setting.
-    mdp_distr = make_mdp_distr(mdp_class=mdp_class, is_goal_terminal=is_goal_terminal)
+    mdp_distr = make_mdp_distr(mdp_class=mdp_class, is_goal_terminal=is_goal_terminal, gamma=gamma)
     actions = mdp_distr.get_actions()
 
-    gamma = 0.99
     # Compute average MDP.
     print("Making and solving avg MDP...", end='')
     sys.stdout.flush()
@@ -184,19 +185,28 @@ def main(open_plot=True):
 
     opt_q_func = compute_optimistic_q_function(mdp_distr)
     avg_q_func = get_q_func(avg_mdp_vi)
-    vmax = 1.0 / (1.0 - gamma) # Vmax = Rmax / (1 - gamma)
+
+    best_v = -100  # Maximum possible value an agent can get in the environment.
+    for x in opt_q_func:
+        for y in opt_q_func[x]:
+            best_v = max(best_v, opt_q_func[x][y])
+    print("Vmax =", best_v)
+    vmax = best_v
+    
+    vmax_func = defaultdict(lambda: defaultdict(lambda: vmax))
+    
 
     if alg == "q":
         eps = 0.1
         lrate = 0.1
-        pure_ql_agent = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-0")
-        pure_ql_agent_opt = QLearningAgent(actions, alpha=lrate, epsilon=eps, default_q=vmax, name="Q-Vmax")
+        pure_ql_agent = QLearningAgent(actions, gamma=gamma, alpha=lrate, epsilon=eps, name="Q-0")
+        pure_ql_agent_opt = QLearningAgent(actions, gamma=gamma, alpha=lrate, epsilon=eps, default_q=vmax, name="Q-Vmax")
         ql_agent_upd_maxq = UpdatingQLearnerAgent(actions, alpha=lrate, epsilon=eps, gamma=gamma, default_q=vmax, name="Q-MaxQInit")
 
-        transfer_ql_agent_optq = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-UO")
+        transfer_ql_agent_optq = QLearningAgent(actions, gamma=gamma, alpha=lrate, epsilon=eps, name="Q-UO")
         transfer_ql_agent_optq.set_init_q_function(opt_q_func)
         
-        transfer_ql_agent_avgq = QLearningAgent(actions, alpha=lrate, epsilon=eps, name="Q-AverageQInit")
+        transfer_ql_agent_avgq = QLearningAgent(actions, gamma=gamma, alpha=lrate, epsilon=eps, name="Q-AverageQInit")
         transfer_ql_agent_avgq.set_init_q_function(avg_q_func)
 
         agents = [transfer_ql_agent_optq, ql_agent_upd_maxq, transfer_ql_agent_avgq,
@@ -207,19 +217,23 @@ def main(open_plot=True):
         """
         known_threshold = 10
         min_experience = 5
-        pure_rmax_agent = RMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-Vmax")
-        updating_trans_rmax_agent = UpdatingRMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-MaxQInit")
-        trans_rmax_agent = RMaxAgent(actions, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-UO")
+        pure_rmax_agent = RMaxAgent(actions, gamma=gamma, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-Vmax")
+        updating_trans_rmax_agent = UpdatingRMaxAgent(actions, gamma=gamma, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-MaxQInit")
+        trans_rmax_agent = RMaxAgent(actions, gamma=gamma, horizon=known_threshold, s_a_threshold=min_experience, name="RMAX-UO")
         trans_rmax_agent.set_init_q_function(opt_q_func)
         agents = [trans_rmax_agent, updating_trans_rmax_agent, pure_rmax_agent, rand_agent]
     elif alg == "delayed-q":
         torelance = 0.1
         min_experience = 5
-        pure_delayed_ql_agent = DelayedQAgent(actions, opt_q_func, m=min_experience, epsilon1=torelance, name="DelayedQ-Vmax")
-        pure_delayed_ql_agent.set_vmax()
-        updating_delayed_ql_agent = UpdatingDelayedQLearningAgent(actions, m=min_experience, epsilon1=torelance, name="DelayedQ-MaxQInit")
-        trans_delayed_ql_agent = DelayedQAgent(actions, opt_q_func, m=min_experience, epsilon1=torelance, name="DelayedQ-UO")
+        pure_delayed_ql_agent = DelayedQAgent(actions, gamma=gamma, m=min_experience, epsilon1=torelance, name="DelayedQ-Vmax")
+        pure_delayed_ql_agent.set_q_function(vmax_func)
+        updating_delayed_ql_agent = UpdatingDelayedQLearningAgent(actions, default_q=vmax, gamma=gamma, m=min_experience, epsilon1=torelance, name="DelayedQ-MaxQInit")
+        updating_delayed_ql_agent.set_q_function(vmax_func)
+        trans_delayed_ql_agent = DelayedQAgent(actions, gamma=gamma, m=min_experience, epsilon1=torelance, name="DelayedQ-UO")
+        trans_delayed_ql_agent.set_q_function(opt_q_func)
+        
         agents = [pure_delayed_ql_agent, updating_delayed_ql_agent, trans_delayed_ql_agent, rand_agent]        
+        # agents = [updating_delayed_ql_agent, trans_delayed_ql_agent, rand_agent]        
     elif alg == "sample-effect":
         """
         This runs a comparison of MaxQInit with different number of MDP samples to calculate the initial Q function. Note that the performance of the sampled MDP is ignored for this experiment. It reproduces the result of Figure 4 of "Policy and Value Transfer for Lifelong Reinforcement Learning".

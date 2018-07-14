@@ -177,7 +177,7 @@ class UpdatingDelayedQLearningAgent(Agent):
 
     def get_max_q_action(self, state):
         '''
-        Args:
+        Args:``
             state (State)
 
         Returns:
@@ -270,10 +270,9 @@ class UpdatingDelayedQLearningAgent(Agent):
         '''
         Initialize Q-values to be Vmax.
         '''
-        for x in self.q_func:
-            for y in self.q_func[x]:
-                self.q_func[x][y] = vmax
-                self.init_q_func[x][y] = vmax
+        self.default_q = vmax
+        self.q_func = defaultdict(lambda: defaultdict(lambda: vmax))
+        self.init_q_func = defaultdict(lambda: defaultdict(lambda: vmax))
 
     def update_init_q_function(self, mdp):
         '''
